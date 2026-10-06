@@ -1,4 +1,4 @@
-package com.banking.transactionservice;
+package com.banking.transactionservice.entity;
 
 import jakarta.persistence.*;
 import java.time.Instant;

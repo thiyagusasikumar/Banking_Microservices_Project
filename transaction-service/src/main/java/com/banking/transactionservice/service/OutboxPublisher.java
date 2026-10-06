@@ -1,4 +1,7 @@
-package com.banking.transactionservice;
+package com.banking.transactionservice.service;
+
+import com.banking.transactionservice.entity.OutboxEvent;
+import com.banking.transactionservice.repository.OutboxRepository;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

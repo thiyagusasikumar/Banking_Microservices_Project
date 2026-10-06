@@ -1,4 +1,6 @@
-package com.banking.transactionservice;
+package com.banking.transactionservice.service;
+
+import com.banking.transactionservice.entity.TransactionRecord;
 
 import java.math.BigDecimal;
 

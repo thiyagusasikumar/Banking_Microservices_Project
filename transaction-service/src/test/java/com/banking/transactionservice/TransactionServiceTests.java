@@ -7,7 +7,13 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.server.ResponseStatusException;
+import com.banking.transactionservice.entity.TransactionRecord;
+import com.banking.transactionservice.repository.TransactionRepository;
+import com.banking.transactionservice.repository.OutboxRepository;
+import com.banking.transactionservice.service.TransactionService;
+import com.banking.transactionservice.service.AccountClient;
+import com.banking.transactionservice.exception.IdempotencyConflictException;
+import com.banking.transactionservice.exception.InvalidTransactionException;
 import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.*;
@@ -53,7 +59,7 @@ class TransactionServiceTests {
         service.create(TransactionRecord.Type.DEPOSIT, null, "A", new BigDecimal("5.00"), "INR", "same-key");
         assertThatThrownBy(() -> service.create(TransactionRecord.Type.DEPOSIT, null, "A",
                 new BigDecimal("6.00"), "INR", "same-key"))
-                .isInstanceOf(ResponseStatusException.class).hasMessageContaining("different request");
+                .isInstanceOf(IdempotencyConflictException.class).hasMessageContaining("different request");
     }
 
     @Test
@@ -77,7 +83,7 @@ class TransactionServiceTests {
     void sameSourceAndDestinationIsRejectedBeforeCallingAccounts() {
         assertThatThrownBy(() -> service.create(TransactionRecord.Type.TRANSFER, "A", "A",
                 new BigDecimal("1.00"), "INR", "bad-key"))
-                .isInstanceOf(ResponseStatusException.class);
+                .isInstanceOf(InvalidTransactionException.class);
         verifyNoInteractions(accountClient);
     }
 
@@ -96,5 +102,29 @@ class TransactionServiceTests {
         mvc.perform(get("/transactions/{reference}", reference))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.amount").value(12.50));
+    }
+
+    @Test
+    void httpErrorsUseExpectedStatusCodes() throws Exception {
+        when(accountClient.apply(anyString(), any(), any(), any(), any(), any()))
+                .thenReturn(AccountClient.Outcome.REJECTED);
+        mvc.perform(post("/transactions/deposit")
+                        .header("Idempotency-Key", "duplicate-key")
+                        .contentType("application/json")
+                        .content("{\"accountId\":\"A\",\"amount\":5.00,\"currency\":\"INR\"}"))
+                .andExpect(status().isCreated());
+        mvc.perform(post("/transactions/deposit")
+                        .header("Idempotency-Key", "duplicate-key")
+                        .contentType("application/json")
+                        .content("{\"accountId\":\"A\",\"amount\":6.00,\"currency\":\"INR\"}"))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Idempotency key belongs to a different request"));
+        mvc.perform(get("/transactions/missing-reference"))
+                .andExpect(status().isNotFound());
+        mvc.perform(post("/transactions/deposit")
+                        .header("Idempotency-Key", "invalid-body")
+                        .contentType("application/json")
+                        .content("{\"accountId\":\"\",\"amount\":5.00,\"currency\":\"INR\"}"))
+                .andExpect(status().isBadRequest());
     }
 }

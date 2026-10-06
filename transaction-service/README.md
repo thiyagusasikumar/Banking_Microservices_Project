@@ -2,6 +2,24 @@
 
 Implements deposit, withdrawal, transfer, status lookup, idempotency, uncertain outcome handling, reconciliation lookup, Resilience4j protection for Account Service calls, and a database outbox for Kafka `transaction-events`.
 
+## Code structure
+
+The Java package `com.banking.transactionservice` follows the requested layered structure:
+
+```text
+controller/  TransactionController
+service/     TransactionService, AccountClient, HttpAccountClient, OutboxPublisher
+repository/  TransactionRepository, OutboxRepository
+entity/      TransactionRecord, OutboxEvent
+dto/         DepositRequest, WithdrawalRequest, TransferRequest,
+             TransactionResponse, AccountOperationRequest, AccountOperationResponse
+exception/   InvalidTransactionException, IdempotencyConflictException,
+             TransactionNotFoundException, GlobalExceptionHandler
+config/      AccountClientConfig
+mapper/      TransactionMapper
+TransactionServiceApplication
+```
+
 ## Run
 
 From the parent folder, run `docker compose up -d`. From this folder, run `mvn test` and `mvn spring-boot:run`. Java 21 is required. Default port: 8083. PostgreSQL and Kafka connection settings can be changed with `DATABASE_URL`, `DATABASE_USER`, `DATABASE_PASSWORD`, `KAFKA_BOOTSTRAP_SERVERS`, and `ACCOUNT_SERVICE_URL`.

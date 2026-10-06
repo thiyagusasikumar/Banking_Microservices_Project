@@ -1,4 +1,6 @@
-package com.banking.transactionservice;
+package com.banking.transactionservice.repository;
+
+import com.banking.transactionservice.entity.TransactionRecord;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.Optional;
