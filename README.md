@@ -1,6 +1,6 @@
 # Banking Microservices Project
 
-This Java 21 / Spring Boot 3.5.16 practice workspace follows the supplied banking microservices outline.
+
 
 ## Projects
 
