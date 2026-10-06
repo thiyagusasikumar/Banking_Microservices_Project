@@ -8,7 +8,7 @@
 | --- | --- |
 | auth-service | Initial Spring Boot Maven project only |
 | account-service | Initial Spring Boot Maven project only |
-| transaction-service | Implemented; see its README |
+| transaction-service | Implemented; |
 | approval-service | Initial Spring Boot Maven project only |
 | ledger-service | Initial Spring Boot Maven project only |
 | notification-service | Initial Spring Boot Maven project only |
