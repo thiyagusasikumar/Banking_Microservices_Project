@@ -1,4 +1,5 @@
 services:
+
   transaction-db:
     image: postgres:17-alpine
     environment:
@@ -14,6 +15,32 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  auth-db:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: auth_password
+    ports:
+      - "5433:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    command: start-dev
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: keycloak-admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: keycloak-admin
+    ports:
+      - "8080:8080"
+
   kafka:
     image: apache/kafka:3.9.1
     ports:
@@ -21,3 +48,4 @@ services:
 
 volumes:
   transaction-db-data:
+  auth-db-data:
