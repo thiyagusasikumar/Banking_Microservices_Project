@@ -44,7 +44,6 @@ public class Account {
     private BigDecimal balance;
 
     @NotBlank(message = "Currency is required")
-    @Pattern(regexp = "[A-Z]{3}", message = "Currency must be three uppercase letters, for example INR")
     @Column(nullable = false, length = 3)
     private String currency;
 

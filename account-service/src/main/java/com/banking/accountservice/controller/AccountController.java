@@ -3,18 +3,20 @@ package com.banking.accountservice.controller;
 
 import com.banking.accountservice.constant.AccountStatus;
 import com.banking.accountservice.dto.CreateAccountRequest;
+import com.banking.accountservice.dto.UpdateAccountRequest;
 import com.banking.accountservice.entity.Account;
 import com.banking.accountservice.service.AccountService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @RestController
-@RequestMapping("/accounts")
+@RequestMapping("/api/v1/accounts")
 @RequiredArgsConstructor
 public class AccountController {
 
@@ -53,8 +55,25 @@ public class AccountController {
         return accountService.updateStatus(id, status);
     }
 
-    @DeleteMapping("/{id}")
-    public String deleteAccount(@PathVariable Long id){
-       return accountService.deleteAccount(id);
+
+    @PutMapping("/{id}")
+    public Account updateAccount(
+            @PathVariable Long id,
+            @RequestBody UpdateAccountRequest request) {
+
+        return accountService.updateAccount(id, request);
     }
+
+//    @DeleteMapping("/{id}")
+//    public String deleteAccount(@PathVariable Long id){
+//       return accountService.deleteAccount(id);
+//    }
+
+    @DeleteMapping("/{id}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void deleteAccount(@PathVariable Long id) {
+        accountService.deleteAccount(id);
+    }
+
+
 }

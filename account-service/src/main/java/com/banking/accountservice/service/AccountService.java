@@ -3,6 +3,7 @@ package com.banking.accountservice.service;
 
 import com.banking.accountservice.constant.AccountStatus;
 import com.banking.accountservice.dto.CreateAccountRequest;
+import com.banking.accountservice.dto.UpdateAccountRequest;
 import com.banking.accountservice.entity.Account;
 
 import java.math.BigDecimal;
@@ -23,4 +24,6 @@ public interface AccountService {
     List<Account> getAccountByCustomerId(Long customerId);
 
     String deleteAccount(Long id);
+
+    Account updateAccount(Long id, UpdateAccountRequest request);
 }

@@ -17,6 +17,5 @@ public class CreateAccountRequest {
     private AccountType accountType;
 
     @NotBlank(message = "Currency is required")
-    @Pattern(regexp = "[A-Z]{3}", message = "Currency must be three uppercase letters")
     private String currency;
 }

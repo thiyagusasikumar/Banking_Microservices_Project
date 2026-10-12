@@ -2,7 +2,11 @@ package com.banking.accountservice.constant;
 
 public enum AccountStatus {
 
-    ACTIVE,
-    BLOCKED,
-    CLOSED
-}
+        PENDING_ACTIVATION,
+        ACTIVE,
+        FROZEN,
+        RESTRICTED,
+        CLOSURE_PENDING,
+        CLOSED
+    }
+

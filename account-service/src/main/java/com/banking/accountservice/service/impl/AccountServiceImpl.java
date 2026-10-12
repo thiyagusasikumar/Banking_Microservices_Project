@@ -2,6 +2,7 @@ package com.banking.accountservice.service.impl;
 
 import com.banking.accountservice.constant.AccountStatus;
 import com.banking.accountservice.dto.CreateAccountRequest;
+import com.banking.accountservice.dto.UpdateAccountRequest;
 import com.banking.accountservice.entity.Account;
 import com.banking.accountservice.repository.AccountRepository;
 import com.banking.accountservice.service.AccountService;
@@ -26,14 +27,21 @@ public class AccountServiceImpl implements AccountService {
     @Transactional
     public Account createAccount(CreateAccountRequest request) {
 
+        if (!"INR".equals(request.getCurrency())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only INR currency is supported"
+            );
+        }
+
         Account account = new Account();
 
         account.setCustomerId(request.getCustomerId());
         account.setAccountType(request.getAccountType());
         account.setCurrency(request.getCurrency());
 
-        account.setAccountNumber("ACC" + System.currentTimeMillis());
-//        account.setAccountNumber("ACC" + UUID.randomUUID().toString().replace("-", ""));
+//        account.setAccountNumber("ACC" + System.currentTimeMillis());
+        account.setAccountNumber("ACC" + UUID.randomUUID().toString().replace("-", ""));
         account.setBalance(BigDecimal.ZERO);
         account.setAccountStatus(AccountStatus.ACTIVE);
         account.setCreatedAt(LocalDateTime.now());
@@ -44,6 +52,14 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public Account getAccountById(Long id) {
+
+        if (id == null || id <= 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Account ID must be positive"
+            );
+        }
+
         return accountRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
@@ -91,6 +107,8 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     public List<Account> getAccountByCustomerId(Long customerId) {
+
+
         List<Account> accounts = accountRepository.findByCustomerId(customerId);
 
         if (accounts.isEmpty()) {
@@ -114,8 +132,7 @@ public class AccountServiceImpl implements AccountService {
         if (account.getBalance().compareTo(BigDecimal.ZERO) != 0) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "Account balance must be zero before deleting"
-            );
+                    "Account balance must be zero before deleting");
         }
 
         accountRepository.delete(account);
@@ -123,5 +140,48 @@ public class AccountServiceImpl implements AccountService {
         return "Account successfully deleted";
 
     }
+
+//    @Override
+//    public Account updateAccount(Long id, UpdateAccountRequest request) {
+//
+//        Account account = accountRepository.findById(id)
+//                .orElseThrow(() -> new RuntimeException("Account not found"));
+//
+//        account.setAccountType(request.getAccountType());
+//        account.setCurrency(request.getCurrency());
+//        account.setUpdatedAt(LocalDateTime.now());
+//        return accountRepository.save(account);
+//    }
+
+
+    @Override
+    @Transactional
+    public Account updateAccount(Long id, UpdateAccountRequest request) {
+
+        Account account = getAccountById(id);
+
+        if (request.getAccountType() == null) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Account type is required"
+            );
+        }
+
+        if (!"INR".equals(request.getCurrency())) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Only INR currency is supported"
+            );
+        }
+
+        account.setAccountType(request.getAccountType());
+        account.setCurrency(request.getCurrency());
+        account.setUpdatedAt(LocalDateTime.now());
+
+        return accountRepository.save(account);
+    }
+
+
+
 }
 

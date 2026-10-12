@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Banking Application - Account Service",
-    "description": "One request for each of the seven endpoints in AccountController.",
+    "description": "Eight requests matching the current AccountController at /api/v1/accounts. Run in order; create captures accountId automatically. Delete runs last and currently returns HTTP 200.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -33,15 +33,17 @@
           }
         ],
         "url": {
-          "raw": "{{baseUrl}}/accounts",
+          "raw": "{{baseUrl}}/api/v1/accounts",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
+            "api",
+            "v1",
             "accounts"
           ]
         },
-        "description": "Create an account. Set accountId manually to the returned ID for other requests.",
+        "description": "Creates an account and saves the returned ID into the collection accountId variable.",
         "body": {
           "mode": "raw",
           "raw": "{\n  \"customerId\": {{customerId}},\n  \"accountType\": \"SAVINGS\",\n  \"currency\": \"INR\"\n}",
@@ -52,7 +54,22 @@
           }
         }
       },
-      "response": []
+      "response": [],
+      "event": [
+        {
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test(\"Account created\", function () { pm.response.to.have.status(201); });",
+              "if (pm.response.code === 201) {",
+              "    const account = pm.response.json();",
+              "    if (account.id !== undefined) pm.collectionVariables.set(\"accountId\", String(account.id));",
+              "}"
+            ]
+          },
+          "listen": "test"
+        }
+      ]
     },
     {
       "name": "02 - Get Account by ID",
@@ -60,11 +77,13 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/accounts/{{accountId}}",
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
+            "api",
+            "v1",
             "accounts",
             "{{accountId}}"
           ]
@@ -79,11 +98,13 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/accounts/getAll",
+          "raw": "{{baseUrl}}/api/v1/accounts/getAll",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
+            "api",
+            "v1",
             "accounts",
             "getAll"
           ]
@@ -98,11 +119,13 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/accounts/{{accountId}}/balance",
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/balance",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
+            "api",
+            "v1",
             "accounts",
             "{{accountId}}",
             "balance"
@@ -118,11 +141,13 @@
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/accounts/customer/{{customerId}}",
+          "raw": "{{baseUrl}}/api/v1/accounts/customer/{{customerId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
+            "api",
+            "v1",
             "accounts",
             "customer",
             "{{customerId}}"
@@ -138,11 +163,13 @@
         "method": "PUT",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/accounts/{{accountId}}/status?status=ACTIVE",
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/status?status=ACTIVE",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
+            "api",
+            "v1",
             "accounts",
             "{{accountId}}",
             "status"
@@ -159,16 +186,53 @@
       "response": []
     },
     {
-      "name": "07 - Delete Account",
+      "name": "07 - Update Account",
       "request": {
-        "method": "DELETE",
-        "header": [],
+        "body": {
+          "raw": "{\n  \"accountType\": \"CURRENT\",\n  \"currency\": \"INR\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          },
+          "mode": "raw"
+        },
         "url": {
-          "raw": "{{baseUrl}}/accounts/{{accountId}}",
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}",
           "host": [
             "{{baseUrl}}"
           ],
           "path": [
+            "api",
+            "v1",
+            "accounts",
+            "{{accountId}}"
+          ]
+        },
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "method": "PUT",
+        "description": "Updates accountType and currency. Supply both fields because the current service replaces both values."
+      },
+      "response": []
+    },
+    {
+      "name": "08 - Delete Account",
+      "request": {
+        "method": "DELETE",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
             "accounts",
             "{{accountId}}"
           ]
