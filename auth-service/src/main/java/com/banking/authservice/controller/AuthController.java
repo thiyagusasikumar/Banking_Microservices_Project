@@ -1,35 +1,64 @@
 package com.banking.authservice.controller;
 
 import com.banking.authservice.Service.AuthService;
-import com.banking.authservice.dto.RegisterRequest;
+import com.banking.authservice.Service.KeycloakUserService;
+import com.banking.authservice.dto.*;
 import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/auth")
 public class AuthController {
 
-
     private final AuthService authService;
+    private final KeycloakUserService keycloakUserService;
 
-    public AuthController(AuthService authService) {
+    public AuthController(AuthService authService, KeycloakUserService keycloakUserService) {
         this.authService = authService;
+        this.keycloakUserService = keycloakUserService;
     }
 
-    @PostMapping("/register")
+    @PostMapping("/public/register")
     public ResponseEntity<String> register(
             @Valid @RequestBody RegisterRequest request) {
-
         authService.register(request);
-
         return ResponseEntity.ok("Registration request received");
     }
-    @GetMapping("/me")
-    public String getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
 
-        return "Keycloak User ID: " + jwt.getSubject();
+//    @PreAuthorize("hasRole('ADMIN')")
+    @PostMapping("/admin/employees")
+    public ResponseEntity<String> createEmployee(@Valid @RequestBody RegisterEmployeeRequest request){
+       authService.registerEmployee(request);
+       return ResponseEntity.ok("Registration request received");
+    }
+
+
+
+    @PostMapping("/login")
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
+        LoginResponse loginResponse=authService.login(loginRequest);
+        return ResponseEntity.ok(loginResponse);
+    }
+    @PostMapping("/refresh")
+    public ResponseEntity<Map<String,Object>> refresh(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+        return ResponseEntity.ok(
+                keycloakUserService.refreshToken(refreshTokenRequest.getToken()));
+    }
+    @PostMapping("/logout")
+    public ResponseEntity<Void> logout(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+        authService.logout(refreshTokenRequest.getToken());
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/me")
+    public CurrentUserResponse getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
+             String keycloakId=jwt.getSubject();
+        return authService.getCurrentUser(keycloakId);
     }
 }

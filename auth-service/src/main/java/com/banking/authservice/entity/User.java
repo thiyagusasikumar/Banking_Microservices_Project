@@ -1,5 +1,6 @@
 package com.banking.authservice.entity;
 
+import com.banking.authservice.constants.Roles;
 import com.banking.authservice.constants.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -52,6 +53,10 @@ public class User {
 
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "role", nullable = false)
+    @Enumerated(EnumType.STRING)
+    private Roles role;
 
     @PrePersist
     protected void onCreate() {
