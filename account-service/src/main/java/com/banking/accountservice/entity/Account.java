@@ -32,7 +32,7 @@ public class Account {
     @Column(nullable = false)
     private Long customerId;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length=50)
     private String accountNumber;
 
     @Enumerated(EnumType.STRING)

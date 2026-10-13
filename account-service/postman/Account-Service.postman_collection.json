@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Banking Application - Account Service",
-    "description": "Eight requests matching the current AccountController at /api/v1/accounts. Run in order; create captures accountId automatically. Delete runs last and currently returns HTTP 200.",
+    "description": "Eight requests matching AccountController. Run Create first to capture accountId and accountNumber. Current me uses customerId query parameter. Search filters apply only when both status and type are supplied.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -18,6 +18,11 @@
     {
       "key": "customerId",
       "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "accountNumber",
+      "value": "ACC123",
       "type": "string"
     }
   ],
@@ -43,7 +48,7 @@
             "accounts"
           ]
         },
-        "description": "Creates an account and saves the returned ID into the collection accountId variable.",
+        "description": "Creates an INR savings account. Captures accountId and accountNumber for later requests.",
         "body": {
           "mode": "raw",
           "raw": "{\n  \"customerId\": {{customerId}},\n  \"accountType\": \"SAVINGS\",\n  \"currency\": \"INR\"\n}",
@@ -64,6 +69,7 @@
               "if (pm.response.code === 201) {",
               "    const account = pm.response.json();",
               "    if (account.id !== undefined) pm.collectionVariables.set(\"accountId\", String(account.id));",
+              "    if (account.accountNumber) pm.collectionVariables.set(\"accountNumber\", account.accountNumber);",
               "}"
             ]
           },
@@ -88,17 +94,28 @@
             "{{accountId}}"
           ]
         },
-        "description": "Retrieves the selected account."
+        "description": "Retrieves the selected account by its accountId."
       },
-      "response": []
+      "response": [],
+      "event": [
+        {
+          "script": {
+            "exec": [
+              "pm.test(\"Expected success status\", function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          },
+          "listen": "test"
+        }
+      ]
     },
     {
-      "name": "03 - Get All Accounts",
+      "name": "03 - Get Account by Number",
       "request": {
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/v1/accounts/getAll",
+          "raw": "{{baseUrl}}/api/v1/accounts/by-number/{{accountNumber}}",
           "host": [
             "{{baseUrl}}"
           ],
@@ -106,20 +123,32 @@
             "api",
             "v1",
             "accounts",
-            "getAll"
+            "by-number",
+            "{{accountNumber}}"
           ]
         },
-        "description": "Retrieves all accounts using the existing controller route."
+        "description": "Uses accountNumber captured by Create Account."
       },
-      "response": []
+      "response": [],
+      "event": [
+        {
+          "script": {
+            "exec": [
+              "pm.test(\"Expected success status\", function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          },
+          "listen": "test"
+        }
+      ]
     },
     {
-      "name": "04 - Get Account Balance",
+      "name": "04 - Get My Accounts",
       "request": {
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/balance",
+          "raw": "{{baseUrl}}/api/v1/accounts/me?customerId={{customerId}}",
           "host": [
             "{{baseUrl}}"
           ],
@@ -127,13 +156,29 @@
             "api",
             "v1",
             "accounts",
-            "{{accountId}}",
-            "balance"
+            "me"
+          ],
+          "query": [
+            {
+              "value": "{{customerId}}",
+              "key": "customerId"
+            }
           ]
         },
-        "description": "Retrieves the selected account balance."
+        "description": "Current implementation requires customerId as a query parameter; it does not derive it from authentication."
       },
-      "response": []
+      "response": [],
+      "event": [
+        {
+          "script": {
+            "exec": [
+              "pm.test(\"Expected success status\", function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          },
+          "listen": "test"
+        }
+      ]
     },
     {
       "name": "05 - Get Accounts by Customer ID",
@@ -153,17 +198,123 @@
             "{{customerId}}"
           ]
         },
-        "description": "Retrieves accounts for the selected customer."
+        "description": "Returns accounts for the selected customer."
       },
-      "response": []
+      "response": [],
+      "event": [
+        {
+          "script": {
+            "exec": [
+              "pm.test(\"Expected success status\", function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          },
+          "listen": "test"
+        }
+      ]
     },
     {
-      "name": "06 - Update Account Status",
+      "name": "06 - Search Accounts",
       "request": {
-        "method": "PUT",
+        "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/status?status=ACTIVE",
+          "raw": "{{baseUrl}}/api/v1/accounts?page=0&size=20&status=ACTIVE&type=SAVINGS",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "accounts"
+          ],
+          "query": [
+            {
+              "value": "0",
+              "key": "page"
+            },
+            {
+              "value": "20",
+              "key": "size"
+            },
+            {
+              "value": "ACTIVE",
+              "key": "status"
+            },
+            {
+              "value": "SAVINGS",
+              "key": "type"
+            }
+          ]
+        },
+        "description": "Returns a paginated result. Supply both status and type for filtering; current service ignores a single filter. Remove both filters for an unfiltered page."
+      },
+      "response": [],
+      "event": [
+        {
+          "script": {
+            "exec": [
+              "pm.test(\"Expected success status\", function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          },
+          "listen": "test"
+        }
+      ]
+    },
+    {
+      "name": "07 - Patch Account Type",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "value": "application/json",
+            "key": "Content-Type"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "accounts",
+            "{{accountId}}"
+          ]
+        },
+        "description": "Updates only accountType. Current controller does not pass currency to the service.",
+        "body": {
+          "raw": "{\n  \"accountType\": \"CURRENT\"\n}",
+          "mode": "raw",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": [],
+      "event": [
+        {
+          "script": {
+            "exec": [
+              "pm.test(\"Expected success status\", function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
+          },
+          "listen": "test"
+        }
+      ]
+    },
+    {
+      "name": "08 - Get Account Balance",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/balance",
           "host": [
             "{{baseUrl}}"
           ],
@@ -172,74 +323,23 @@
             "v1",
             "accounts",
             "{{accountId}}",
-            "status"
-          ],
-          "query": [
-            {
-              "key": "status",
-              "value": "ACTIVE"
-            }
+            "balance"
           ]
         },
-        "description": "Update status. Use ACTIVE, BLOCKED or CLOSED. No body required."
+        "description": "Returns the account balance."
       },
-      "response": []
-    },
-    {
-      "name": "07 - Update Account",
-      "request": {
-        "body": {
-          "raw": "{\n  \"accountType\": \"CURRENT\",\n  \"currency\": \"INR\"\n}",
-          "options": {
-            "raw": {
-              "language": "json"
-            }
+      "response": [],
+      "event": [
+        {
+          "script": {
+            "exec": [
+              "pm.test(\"Expected success status\", function () { pm.response.to.have.status(200); });"
+            ],
+            "type": "text/javascript"
           },
-          "mode": "raw"
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "accounts",
-            "{{accountId}}"
-          ]
-        },
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "method": "PUT",
-        "description": "Updates accountType and currency. Supply both fields because the current service replaces both values."
-      },
-      "response": []
-    },
-    {
-      "name": "08 - Delete Account",
-      "request": {
-        "method": "DELETE",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "v1",
-            "accounts",
-            "{{accountId}}"
-          ]
-        },
-        "description": "Physically deletes the selected zero-balance account. Run last. Current controller returns the service success message."
-      },
-      "response": []
+          "listen": "test"
+        }
+      ]
     }
   ]
 }

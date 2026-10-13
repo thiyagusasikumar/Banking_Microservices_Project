@@ -2,12 +2,15 @@ package com.banking.accountservice.controller;
 
 
 import com.banking.accountservice.constant.AccountStatus;
+import com.banking.accountservice.constant.AccountType;
 import com.banking.accountservice.dto.CreateAccountRequest;
 import com.banking.accountservice.dto.UpdateAccountRequest;
 import com.banking.accountservice.entity.Account;
 import com.banking.accountservice.service.AccountService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -28,52 +31,44 @@ public class AccountController {
         return accountService.createAccount(request);
     }
 
-    @GetMapping("/{id}")
-    public Account getAccountById(@PathVariable Long id){
+    @GetMapping("/{accountId}")
+    public Account getAccountById(@PathVariable("accountId") Long id){
         return accountService.getAccountById(id);
     }
 
-    @GetMapping("/getAll")
-    public List<Account> getAllAccount() {
-        return accountService.getAllAccount();
+    @GetMapping("/by-number/{accountNumber}")
+    public Account getByAccountNumber(@PathVariable String accountNumber){
+        return accountService.getByAccountNumber(accountNumber);
     }
 
+    @GetMapping("/me")
+    public List<Account> getMyAccounts(@RequestParam Long customerId) {
 
-    @GetMapping("/{id}/balance")
-    public BigDecimal getBalance(@PathVariable Long id) {
-        return accountService.getBalance(id);
+        return accountService.getMyAccounts(customerId);
     }
 
     @GetMapping("/customer/{customerId}")
-    public List<Account> getAccountByCustomerId(@PathVariable Long customerId){
-        return accountService.getAccountByCustomerId(customerId);
+    public List<Account> getByCustomerId(@PathVariable Long customerId) {
+
+        return accountService.getByCustomerId(customerId);
     }
 
+    @GetMapping
+    public Page<Account> getAllAccounts(@RequestParam(required = false) AccountStatus status, @RequestParam(required = false) AccountType type,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
 
-    @PutMapping("/{id}/status")
-    public Account updateStatus(@PathVariable Long id, @RequestParam AccountStatus status){
-        return accountService.updateStatus(id, status);
+        return accountService.getAllAccounts(
+                status, type, PageRequest.of(page, size));
     }
 
-
-    @PutMapping("/{id}")
-    public Account updateAccount(
-            @PathVariable Long id,
-            @RequestBody UpdateAccountRequest request) {
-
+    @PatchMapping("/{id}")
+    public Account updateAccount(@PathVariable Long id, @RequestBody UpdateAccountRequest request) {
         return accountService.updateAccount(id, request);
     }
 
-//    @DeleteMapping("/{id}")
-//    public String deleteAccount(@PathVariable Long id){
-//       return accountService.deleteAccount(id);
-//    }
+    @GetMapping("/{id}/balance")
+    public BigDecimal getBalance(@PathVariable Long id) {
 
-    @DeleteMapping("/{id}")
-    @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteAccount(@PathVariable Long id) {
-        accountService.deleteAccount(id);
+        return accountService.getBalance(id);
     }
-
-
 }
