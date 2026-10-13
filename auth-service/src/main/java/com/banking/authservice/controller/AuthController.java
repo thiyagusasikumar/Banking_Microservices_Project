@@ -38,8 +38,6 @@ public class AuthController {
        return ResponseEntity.ok("Registration request received");
     }
 
-
-
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         LoginResponse loginResponse=authService.login(loginRequest);
@@ -54,6 +52,13 @@ public class AuthController {
     public ResponseEntity<Void> logout(@RequestBody RefreshTokenRequest refreshTokenRequest) {
         authService.logout(refreshTokenRequest.getToken());
         return ResponseEntity.noContent().build();
+    }
+    @PatchMapping("/me/update")
+    public ResponseEntity<UserUpdateResponse> userUpdate(
+            @AuthenticationPrincipal Jwt jwt,
+            @Valid @RequestBody UserUpdateRequest updateRequest) {
+        UserUpdateResponse response=authService.userUpdate(jwt.getSubject(),updateRequest);
+        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
