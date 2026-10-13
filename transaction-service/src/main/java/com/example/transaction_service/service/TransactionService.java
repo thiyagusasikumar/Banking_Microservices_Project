@@ -29,8 +29,7 @@ public class TransactionService {
     }
 
 
-    public TransactionRecord create(Type type, String source, String destination, BigDecimal amount,
-                                    String currency, String key) {
+public TransactionRecord create(Type type, String source, String destination, BigDecimal amount, String currency, String key) {
 
         validate(type, source, destination, amount, currency, key);
 
@@ -130,9 +129,19 @@ public class TransactionService {
         }
 
         switch (type) {
-            case DEPOSIT, WITHDRAWAL -> {
+            case DEPOSIT -> {
                 if (destination == null || destination.isBlank()) {
                     throw new InputMismatchException("Account is required");
+                }
+            }
+            case WITHDRAWAL -> {
+                if (source == null || source.isBlank()) {
+                    throw new InputMismatchException("Account is required");
+                }
+            }
+            case TRANSFER -> {
+                if (source == null || source.isBlank() || destination == null || destination.isBlank()) {
+                    throw new InputMismatchException("Source and destination accounts are required");
                 }
             }
         }
