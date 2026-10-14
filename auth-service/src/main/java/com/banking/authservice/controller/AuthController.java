@@ -4,6 +4,7 @@ import com.banking.authservice.Service.AuthService;
 import com.banking.authservice.Service.KeycloakUserService;
 import com.banking.authservice.dto.*;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -25,17 +26,14 @@ public class AuthController {
     }
 
     @PostMapping("/public/register")
-    public ResponseEntity<String> register(
+    public ResponseEntity<RegisterResponse> register(
             @Valid @RequestBody RegisterRequest request) {
-        authService.register(request);
-        return ResponseEntity.ok("Registration request received");
+        return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
 
-//    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/admin/employees")
-    public ResponseEntity<String> createEmployee(@Valid @RequestBody RegisterEmployeeRequest request){
-       authService.registerEmployee(request);
-       return ResponseEntity.ok("Registration request received");
+    public ResponseEntity<RegisterResponse> createEmployee(@Valid @RequestBody RegisterEmployeeRequest request){
+       return ResponseEntity.status(HttpStatus.CREATED).body(authService.registerEmployee(request));
     }
 
     @PostMapping("/login")

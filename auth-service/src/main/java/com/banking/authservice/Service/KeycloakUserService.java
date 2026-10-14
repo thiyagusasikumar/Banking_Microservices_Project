@@ -7,6 +7,7 @@ import com.banking.authservice.dto.RegisterRequest;
 import com.banking.authservice.dto.UserUpdateRequest;
 import jakarta.ws.rs.core.Response;
 import org.keycloak.admin.client.Keycloak;
+import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UserResource;
 import org.keycloak.representations.idm.CredentialRepresentation;
 import org.keycloak.representations.idm.RoleRepresentation;
@@ -94,7 +95,7 @@ public class KeycloakUserService {
     }
 
     private String createUser(UserRepresentation user, String roleName) {
-        var realmResource = keycloak.realm(realm);
+        RealmResource realmResource = keycloak.realm(realm);
         RoleRepresentation role = realmResource.roles()
                 .get(roleName)
                 .toRepresentation();
@@ -185,5 +186,24 @@ public class KeycloakUserService {
                     HttpStatus.UNAUTHORIZED,
                     "Refresh token is invalid or expired");
         }
+    }
+    public void updateCustomerIdAttribute(Long customerId,String keycloakUserId) {
+        UserResource userResource = keycloak
+                .realm(realm)
+                .users()
+                .get(keycloakUserId);
+
+        UserRepresentation representation =
+                userResource.toRepresentation();
+
+        Map<String, List<String>> attributes = representation.getAttributes();
+        if (attributes == null) {
+            attributes = new HashMap<>();
+        }
+        attributes.put("customer_id", List.of(customerId.toString()));
+
+        representation.setAttributes(attributes);
+
+        userResource.update(representation);
     }
 }

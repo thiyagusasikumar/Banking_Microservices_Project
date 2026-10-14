@@ -54,16 +54,16 @@ public class AuthService {
         this.userMapper = userMapper;
     }
 
-    public void register(RegisterRequest request) {
+    public RegisterResponse register(RegisterRequest request) {
         userIsAvailable(request.getUsername(), request.getEmail());
 
         String keycloakUserId = keycloakUserService.createUser(request);
 
-        saveUser(keycloakUserId, request.getUsername(), request.getEmail(),
+        return saveUser(keycloakUserId, request.getUsername(), request.getEmail(),
                 request.getFirstName(), request.getLastName(), Roles.CUSTOMER);
     }
 
-    public void registerEmployee(RegisterEmployeeRequest request) {
+    public RegisterResponse registerEmployee(RegisterEmployeeRequest request) {
         userIsAvailable(request.getUsername(), request.getEmail());
 
         EmployeeRoles role;
@@ -76,7 +76,7 @@ public class AuthService {
         }
 
         String keycloakUserId = keycloakUserService.createEmployee(request,role);
-        saveUser(keycloakUserId, request.getUsername(), request.getEmail(),
+       return saveUser(keycloakUserId, request.getUsername(), request.getEmail(),
                 request.getFirstName(), request.getLastName(), Roles.valueOf(role.name()));
     }
 
@@ -90,7 +90,7 @@ public class AuthService {
         }
     }
 
-    private void saveUser(String keycloakUserId, String username, String email, String firstName, String lastName, Roles role) {
+    private RegisterResponse saveUser(String keycloakUserId, String username, String email, String firstName, String lastName, Roles role) {
         User user = new User();
         user.setKeycloakUserId(keycloakUserId);
         user.setUsername(username);
@@ -99,6 +99,9 @@ public class AuthService {
         user.setLastName(lastName);
         user.setRole(role);
         userRepository.save(user);
+        Long customerId = user.getId();
+        keycloakUserService.updateCustomerIdAttribute(customerId,keycloakUserId);
+        return userMapper.toRegisterResponse(user);
     }
 
     public LoginResponse login(LoginRequest loginRequest)  {
@@ -119,12 +122,13 @@ public class AuthService {
                  throw new IllegalStateException("Invalid token response from Keycloak");
              }
 
-             return new LoginResponse(
-                     tokenResponse.getAccessToken(),
-                     tokenResponse.getRefreshToken(),
-                     tokenResponse.getTokenType(),
-                     tokenResponse.getExpiresIn()
-             );
+//             return new LoginResponse(
+//                     tokenResponse.getAccessToken(),
+//                     tokenResponse.getRefreshToken(),
+//                     tokenResponse.getTokenType(),
+//                     tokenResponse.getExpiresIn()
+//             );
+             return userMapper.toLoginResponse(tokenResponse);
 
          }
          catch (HttpClientErrorException.BadRequest
@@ -141,7 +145,7 @@ public class AuthService {
     }
     public UserUpdateResponse userUpdate(String keycloakUserId, UserUpdateRequest updateRequest) {
         User user = userRepository.findByKeycloakUserId(keycloakUserId)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
 
         if (updateRequest.getEmail() != null
                 && !updateRequest.getEmail().equalsIgnoreCase(user.getEmail())
@@ -190,11 +194,12 @@ public class AuthService {
     public CurrentUserResponse getCurrentUser(String keycloakUserId)
     {
         User user=userRepository.findByKeycloakUserId(keycloakUserId).orElseThrow(()->new UsernameNotFoundException("User not found"));
-        return new CurrentUserResponse(
-                user.getId(),
-                user.getEmail(),
-                user.getUsername(),
-                user.getKeycloakUserId()
-        );
+//        return new CurrentUserResponse(
+//                user.getId(),
+//                user.getEmail(),
+//                user.getUsername(),
+//                user.getKeycloakUserId()
+
+        return userMapper.toCurrentUserResponse(user);
     }
 }
