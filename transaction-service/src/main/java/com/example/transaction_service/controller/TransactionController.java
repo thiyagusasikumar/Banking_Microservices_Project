@@ -3,6 +3,7 @@ package com.example.transaction_service.controller;
 import com.example.transaction_service.constants.Type;
 import com.example.transaction_service.dto.DepositRequest;
 import com.example.transaction_service.dto.TransactionResponse;
+import com.example.transaction_service.dto.TransferRequest;
 import com.example.transaction_service.dto.WithdrawalRequest;
 import com.example.transaction_service.entity.TransactionRecord;
 import com.example.transaction_service.mapper.TransactionMapper;
@@ -39,6 +40,12 @@ public class TransactionController {
     public ResponseEntity<TransactionResponse> withdrawal(@RequestHeader("Idempotency-Key") String key,
                                                           @Valid @RequestBody WithdrawalRequest request) {
         return created(service.create(Type.WITHDRAWAL, request.accountId(), null, request.amount(), request.currency(), key));
+    }
+
+    @PostMapping("/transfer")
+    public ResponseEntity<TransactionResponse> transfer(@RequestHeader("Idempotency-Key") String key,
+                                                        @Valid @RequestBody TransferRequest request) {
+        return created(service.create(Type.TRANSFER, request.sourceAccount(), request.destinationAccount(), request.amount(), request.currency(), key));
     }
 
     private ResponseEntity<TransactionResponse> created(TransactionRecord record) {

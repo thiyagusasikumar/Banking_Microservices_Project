@@ -37,9 +37,9 @@ public TransactionRecord create(Type type, String source, String destination, Bi
 
         String finalDestination = destination == null ? null : destination.trim();
 
-        String finalCurrency = currency.trim().toUpperCase(Locale.ROOT);
+        String finalCurrency = currency.trim().toUpperCase();
 
-        BigDecimal finalAmount = amount.setScale(2, RoundingMode.HALF_EVEN);
+        BigDecimal finalAmount = amount.setScale(2);
 
         TransactionRecord existing = transactions.findByIdempotencyKey(key).orElse(null);
 
