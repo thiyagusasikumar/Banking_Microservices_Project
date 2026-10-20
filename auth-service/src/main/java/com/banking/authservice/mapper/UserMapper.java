@@ -14,4 +14,6 @@ public interface UserMapper {
     LoginResponse toLoginResponse(KeycloakTokenResponse tokenResponse);
 
     RegisterResponse toRegisterResponse(User user);
+
+    AdminUserResponse toAdminUserResponse(User user);
 }

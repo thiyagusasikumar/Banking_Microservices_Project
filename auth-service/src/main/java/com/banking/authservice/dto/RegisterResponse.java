@@ -8,6 +8,6 @@ import lombok.Data;
 @AllArgsConstructor
 public class RegisterResponse {
     private String keycloakUserId;
-    private String username;
+    private String userName;
     private String email;
 }

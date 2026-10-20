@@ -11,6 +11,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -30,12 +31,6 @@ public class AuthController {
             @Valid @RequestBody RegisterRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(authService.register(request));
     }
-
-    @PostMapping("/admin/employees")
-    public ResponseEntity<RegisterResponse> createEmployee(@Valid @RequestBody RegisterEmployeeRequest request){
-       return ResponseEntity.status(HttpStatus.CREATED).body(authService.registerEmployee(request));
-    }
-
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         LoginResponse loginResponse=authService.login(loginRequest);
@@ -63,5 +58,11 @@ public class AuthController {
     public CurrentUserResponse getCurrentUser(@AuthenticationPrincipal Jwt jwt) {
              String keycloakId=jwt.getSubject();
         return authService.getCurrentUser(keycloakId);
+    }
+    @PostMapping("/deactivate")
+    public ResponseEntity<String> deactivateUser(@AuthenticationPrincipal Jwt jwt) {
+        String keycloakId=jwt.getSubject();
+        authService.deactivateUser(keycloakId);
+        return ResponseEntity.ok("deactivated");
     }
 }

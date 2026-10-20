@@ -3,14 +3,21 @@ package com.banking.authservice.Service;
 
 import com.banking.authservice.constants.EmployeeRoles;
 import com.banking.authservice.constants.Roles;
+import com.banking.authservice.constants.UserStatus;
 import com.banking.authservice.dto.*;
 import com.banking.authservice.entity.User;
+import com.banking.authservice.exception.DuplicateUserException;
+import com.banking.authservice.exception.AuthenticationFailedException;
 import com.banking.authservice.exception.InvalidCredentialsException;
 
 
 import com.banking.authservice.mapper.UserMapper;
 import com.banking.authservice.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -23,10 +30,15 @@ import org.springframework.web.client.RestClientException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Locale;
+import java.util.Optional;
+import java.util.Set;
 
 
 @Service
 public class AuthService {
+
+    public static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id","userName","email","role","status");
+
     @Value("${keycloak.server-url}")
     private String serverUrl;
 
@@ -55,16 +67,16 @@ public class AuthService {
     }
 
     public RegisterResponse register(RegisterRequest request) {
-        userIsAvailable(request.getUsername(), request.getEmail());
+        userIsAvailable(request.getUserName(), request.getEmail());
 
         String keycloakUserId = keycloakUserService.createUser(request);
 
-        return saveUser(keycloakUserId, request.getUsername(), request.getEmail(),
+        return saveUser(keycloakUserId, request.getUserName(), request.getEmail(),
                 request.getFirstName(), request.getLastName(), Roles.CUSTOMER);
     }
 
     public RegisterResponse registerEmployee(RegisterEmployeeRequest request) {
-        userIsAvailable(request.getUsername(), request.getEmail());
+        userIsAvailable(request.getUseName(), request.getEmail());
 
         EmployeeRoles role;
         try {
@@ -76,24 +88,24 @@ public class AuthService {
         }
 
         String keycloakUserId = keycloakUserService.createEmployee(request,role);
-       return saveUser(keycloakUserId, request.getUsername(), request.getEmail(),
+       return saveUser(keycloakUserId, request.getUseName(), request.getEmail(),
                 request.getFirstName(), request.getLastName(), Roles.valueOf(role.name()));
     }
 
-    private void userIsAvailable(String username, String email) {
-        if (userRepository.findByUsername(username).isPresent()) {
-            throw new InvalidCredentialsException("Username already exists");
+    private void userIsAvailable(String userName, String email) {
+        if (userRepository.findByUserName(userName) != null) {
+            throw new DuplicateUserException("Username already exists");
         }
 
         if (userRepository.findByEmail(email).isPresent()) {
-            throw new InvalidCredentialsException("Email already exists");
+            throw new DuplicateUserException("Email already exists");
         }
     }
 
     private RegisterResponse saveUser(String keycloakUserId, String username, String email, String firstName, String lastName, Roles role) {
         User user = new User();
         user.setKeycloakUserId(keycloakUserId);
-        user.setUsername(username);
+        user.setUserName(username);
         user.setEmail(email);
         user.setFirstName(firstName);
         user.setLastName(lastName);
@@ -105,11 +117,19 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest loginRequest)  {
+         User user=userRepository.findByUserName(loginRequest.getUserName());
+
+         if (user == null) {
+             throw new AuthenticationFailedException("Invalid username or password");
+         }
+         if(user.getStatus().equals(UserStatus.INACTIVE)){
+             throw new InvalidCredentialsException("user is inactive");
+         }
          MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
          formData.add("grant_type", "password");
          formData.add("client_id",clientId);
          formData.add("client_secret",clientSecret);
-         formData.add("username", loginRequest.getUsername());
+         formData.add("username", loginRequest.getUserName());
          formData.add("password", loginRequest.getPassword());
          try{
              KeycloakTokenResponse tokenResponse=restClient.post().uri(tokenUrl).
@@ -119,38 +139,27 @@ public class AuthService {
                      body(KeycloakTokenResponse.class);
 
              if(tokenResponse==null || tokenResponse.getAccessToken()==null){
-                 throw new IllegalStateException("Invalid token response from Keycloak");
+                 throw new RestClientException("Keycloak returned an invalid token response");
              }
-
-//             return new LoginResponse(
-//                     tokenResponse.getAccessToken(),
-//                     tokenResponse.getRefreshToken(),
-//                     tokenResponse.getTokenType(),
-//                     tokenResponse.getExpiresIn()
-//             );
              return userMapper.toLoginResponse(tokenResponse);
 
          }
          catch (HttpClientErrorException.BadRequest
                 | HttpClientErrorException.Unauthorized ex) {
 
-             throw new InvalidCredentialsException(
+             throw new AuthenticationFailedException(
                      "Invalid username or password");
 
-         } catch (RestClientException ex) {
-
-             throw new IllegalStateException(
-                     "Unable to communicate with Keycloak", ex);
          }
     }
     public UserUpdateResponse userUpdate(String keycloakUserId, UserUpdateRequest updateRequest) {
         User user = userRepository.findByKeycloakUserId(keycloakUserId)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
 
         if (updateRequest.getEmail() != null
                 && !updateRequest.getEmail().equalsIgnoreCase(user.getEmail())
                 && userRepository.findByEmail(updateRequest.getEmail()).isPresent()) {
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already in use");
+            throw new DuplicateUserException("Email is already in use");
         }
 
         keycloakUserService.updateProfile(keycloakUserId, updateRequest);
@@ -194,12 +203,74 @@ public class AuthService {
     public CurrentUserResponse getCurrentUser(String keycloakUserId)
     {
         User user=userRepository.findByKeycloakUserId(keycloakUserId).orElseThrow(()->new UsernameNotFoundException("User not found"));
-//        return new CurrentUserResponse(
-//                user.getId(),
-//                user.getEmail(),
-//                user.getUsername(),
-//                user.getKeycloakUserId()
-
         return userMapper.toCurrentUserResponse(user);
+    }
+    public AdminUserResponse getUser(Long id){
+        User user=userRepository.findById(id).orElseThrow(()->new UsernameNotFoundException("User not found"));
+        return userMapper.toAdminUserResponse(user);
+    }
+    public void deactivateUser(String keycloakUserId)
+    {
+       User user=userRepository.findByKeycloakUserId(keycloakUserId).orElseThrow(()->new UsernameNotFoundException("User not found"));
+        if(user.getStatus().equals(UserStatus.INACTIVE))
+        {
+            throw new InvalidCredentialsException("User is inactive");
+        }
+        keycloakUserService.deactivateUser(keycloakUserId);
+        user.setStatus(UserStatus.INACTIVE);
+        userRepository.save(user);
+    }
+    public void activateUserByAdmin(Long userId)
+    {
+        User user=userRepository.findById(userId).orElseThrow(()->new UsernameNotFoundException("User not found"));
+        if(user.getStatus().equals(UserStatus.ACTIVE))
+        {
+            throw new InvalidCredentialsException("User is active");
+        } keycloakUserService.activateUser(user.getKeycloakUserId());
+        user.setStatus(UserStatus.ACTIVE);
+        userRepository.save(user);
+    }
+    public void deactivateUserByAdmin(Long userId)
+    {
+        User user=userRepository.findById(userId).orElseThrow(()->new UsernameNotFoundException("User not found"));
+        if(user.getStatus().equals(UserStatus.INACTIVE))
+        {
+            throw new InvalidCredentialsException("User is inactive");
+        }
+        keycloakUserService.deactivateUser(user.getKeycloakUserId());
+
+        user.setStatus(UserStatus.INACTIVE);
+        userRepository.save(user);
+    }
+    public Page<AdminUserResponse> searchUsers(String query,int page,int size,String sortBy,String direction){
+      if(page < 0)
+      {
+          throw new IllegalArgumentException("page must not be negative");
+      }
+      if(size < 1 || size> 100)
+      {
+          throw new IllegalArgumentException("size must be between 1 and 100");
+      }
+      if(!ALLOWED_SORT_FIELDS.contains(sortBy))
+      {
+          throw new IllegalArgumentException("sort fields are invalid"+sortBy);
+      }
+        Sort.Direction sortDirection;
+      try{
+          sortDirection=Sort.Direction.fromString(direction);
+      }
+      catch (IllegalArgumentException e){
+          throw new IllegalArgumentException("Invalid sort direction");
+      }
+        Pageable pageable= PageRequest.of(page,size,Sort.by(sortDirection,sortBy));
+
+      Page<User> users=userRepository.searchUsers(query==null || query.isBlank()?null:query.trim(),pageable);
+
+       return  users.map(user -> new AdminUserResponse(
+                user.getId(),
+                user.getUserName(),
+                user.getEmail(),
+                user.getStatus()
+        ));
     }
 }
