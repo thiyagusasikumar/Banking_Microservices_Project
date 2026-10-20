@@ -18,8 +18,6 @@ import org.springframework.web.server.ResponseStatusException;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.UUID;
-
 @Service
 @RequiredArgsConstructor
 public class AccountServiceImpl implements AccountService {
@@ -48,7 +46,7 @@ public class AccountServiceImpl implements AccountService {
         );
 //        account.setAccountNumber("ACC" + UUID.randomUUID().toString().replace("-", ""));
         account.setBalance(BigDecimal.ZERO);
-        account.setAccountStatus(AccountStatus.ACTIVE);
+        account.setAccountStatus(AccountStatus.PENDING_ACTIVATION);
         account.setCreatedAt(LocalDateTime.now());
         account.setUpdatedAt(LocalDateTime.now());
 
@@ -130,5 +128,3 @@ public class AccountServiceImpl implements AccountService {
     }
 
 }
-
-

@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Banking Application - Account Service",
-    "description": "Eight requests matching AccountController. Run Create first to capture accountId and accountNumber. Current me uses customerId query parameter. Search filters apply only when both status and type are supplied.",
+    "description": "Thirteen requests matching AccountController and AccountLifecycleController. Run Create Account first to capture accountId and accountNumber. Lifecycle order: activate, freeze, unfreeze, close, status-history. Current me uses customerId query parameter. Search filters apply only when both status and type are supplied.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -340,6 +340,172 @@
           "listen": "test"
         }
       ]
+    },
+    {
+      "name": "09 - Activate Account",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/activate",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "accounts",
+            "{{accountId}}",
+            "activate"
+          ]
+        },
+        "description": "Updates the account status and saves a history entry. Uses accountId captured by Create Account.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"reason\": \"Account activation requested\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "10 - Freeze Account",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/freeze",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "accounts",
+            "{{accountId}}",
+            "freeze"
+          ]
+        },
+        "description": "Updates the account status and saves a history entry. Uses accountId captured by Create Account.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"reason\": \"Account review requested\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "11 - Unfreeze Account",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/unfreeze",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "accounts",
+            "{{accountId}}",
+            "unfreeze"
+          ]
+        },
+        "description": "Updates the account status and saves a history entry. Uses accountId captured by Create Account.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"reason\": \"Account review completed\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "12 - Close Account",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/close",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "accounts",
+            "{{accountId}}",
+            "close"
+          ]
+        },
+        "description": "Updates the account status and saves a history entry. Uses accountId captured by Create Account.",
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"reason\": \"Customer requested account closure\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "13 - Get Status History",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/accounts/{{accountId}}/status-history",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "accounts",
+            "{{accountId}}",
+            "status-history"
+          ]
+        },
+        "description": "Returns saved account status changes, newest first."
+      },
+      "response": []
     }
   ]
 }

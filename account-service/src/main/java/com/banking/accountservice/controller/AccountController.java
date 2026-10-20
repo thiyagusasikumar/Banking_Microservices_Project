@@ -55,7 +55,7 @@ public class AccountController {
 
     @GetMapping
     public Page<Account> getAllAccounts(@RequestParam(required = false) AccountStatus status, @RequestParam(required = false) AccountType type,
-            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
+                                        @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "10") int size) {
 
         return accountService.getAllAccounts(
                 status, type, PageRequest.of(page, size));
