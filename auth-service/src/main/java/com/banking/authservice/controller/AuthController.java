@@ -37,12 +37,14 @@ public class AuthController {
         return ResponseEntity.ok(loginResponse);
     }
     @PostMapping("/refresh")
-    public ResponseEntity<Map<String,Object>> refresh(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+    public ResponseEntity<Map<String,Object>> refresh(
+            @Valid @RequestBody RefreshTokenRequest refreshTokenRequest) {
         return ResponseEntity.ok(
                 keycloakUserService.refreshToken(refreshTokenRequest.getToken()));
     }
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(@RequestBody RefreshTokenRequest refreshTokenRequest) {
+    public ResponseEntity<Void> logout(
+            @Valid @RequestBody RefreshTokenRequest refreshTokenRequest) {
         authService.logout(refreshTokenRequest.getToken());
         return ResponseEntity.noContent().build();
     }

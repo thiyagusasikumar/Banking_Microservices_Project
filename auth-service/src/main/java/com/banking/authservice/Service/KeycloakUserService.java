@@ -24,8 +24,8 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.client.RestClientResponseException;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.HashMap;
@@ -141,7 +141,7 @@ public class KeycloakUserService {
         if(request.getEmail()!=null){
             String currentEmail = representation.getEmail();
             representation.setEmail(request.getEmail());
-            if (currentEmail == null || !request.getEmail().equalsIgnoreCase(currentEmail)) {
+            if (!request.getEmail().equalsIgnoreCase(currentEmail)) {
                 representation.setEmailVerified(false);
             }
         }
@@ -190,7 +190,8 @@ public class KeycloakUserService {
                     .retrieve()
                     .body(new ParameterizedTypeReference<Map<String, Object>>() {});
 
-        } catch (RestClientResponseException ex) {
+        } catch (HttpClientErrorException.BadRequest
+                 | HttpClientErrorException.Unauthorized ex) {
             throw new ResponseStatusException(
                     HttpStatus.UNAUTHORIZED,
                     "Refresh token is invalid or expired");

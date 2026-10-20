@@ -27,12 +27,12 @@ public class AdminUserController {
 
         return ResponseEntity.ok(authService.searchUsers(query, page, size, sortBy, direction));
     }
-    @PostMapping("/users/{id}/deactivate")
+    @PostMapping("/users/deactivate/{id}")
     public ResponseEntity<String> deactivateUser(@PathVariable Long id){
         authService.deactivateUserByAdmin(id);
         return ResponseEntity.ok("Deactivated");
     }
-    @PostMapping("/users/{id}/activate")
+    @PostMapping("/users/activate/{id}")
     public ResponseEntity<String> activateUser(@PathVariable Long id){
         authService.activateUserByAdmin(id);
         return ResponseEntity.ok("Activated");

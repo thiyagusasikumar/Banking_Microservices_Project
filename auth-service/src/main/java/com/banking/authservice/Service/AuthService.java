@@ -6,6 +6,7 @@ import com.banking.authservice.constants.Roles;
 import com.banking.authservice.constants.UserStatus;
 import com.banking.authservice.dto.*;
 import com.banking.authservice.entity.User;
+import com.banking.authservice.exception.AccountNotActiveException;
 import com.banking.authservice.exception.DuplicateUserException;
 import com.banking.authservice.exception.AuthenticationFailedException;
 import com.banking.authservice.exception.InvalidCredentialsException;
@@ -19,7 +20,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
-import org.springframework.http.HttpStatus;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
@@ -27,10 +27,8 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Locale;
-import java.util.Optional;
 import java.util.Set;
 
 
@@ -123,7 +121,7 @@ public class AuthService {
              throw new AuthenticationFailedException("Invalid username or password");
          }
          if(user.getStatus().equals(UserStatus.INACTIVE)){
-             throw new InvalidCredentialsException("user is inactive");
+             throw new AccountNotActiveException();
          }
          MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
          formData.add("grant_type", "password");
@@ -193,12 +191,17 @@ public class AuthService {
             form.add("client_secret", clientSecret);
         }
 
-        restClient.post()
-                .uri(logoutUrl)
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
-                .body(form)
-                .retrieve()
-                .toBodilessEntity();
+        try {
+            restClient.post()
+                    .uri(logoutUrl)
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(form)
+                    .retrieve()
+                    .toBodilessEntity();
+        } catch (HttpClientErrorException.BadRequest
+                 | HttpClientErrorException.Unauthorized ex) {
+            throw new AuthenticationFailedException("Refresh token is invalid or expired");
+        }
     }
     public CurrentUserResponse getCurrentUser(String keycloakUserId)
     {
