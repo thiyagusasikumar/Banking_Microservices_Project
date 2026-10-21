@@ -48,10 +48,20 @@ public class TransactionController {
         return created(service.create(Type.TRANSFER, request.sourceAccount(), request.destinationAccount(), request.amount(), request.currency(), key));
     }
 
+    @GetMapping("/{reference}")
+    public TransactionResponse get(@PathVariable String reference) {
+        return mapper.toResponse(service.get(reference));
+    }
+
+    @PostMapping("/{reference}/reconcile")
+    public TransactionResponse reconcile(@PathVariable String reference) {
+        return mapper.toResponse(service.reconcile(reference));
+    }
+
     private ResponseEntity<TransactionResponse> created(TransactionRecord record) {
 
         return ResponseEntity
-                .created(URI.create(record.getReference()))
+                .created(URI.create("/transactions/" + record.getReference()))
                 .body(mapper.toResponse(record));
     }
 
