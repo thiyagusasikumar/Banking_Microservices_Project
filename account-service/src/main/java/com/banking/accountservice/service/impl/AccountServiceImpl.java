@@ -2,6 +2,8 @@ package com.banking.accountservice.service.impl;
 
 import com.banking.accountservice.constant.AccountStatus;
 import com.banking.accountservice.constant.AccountType;
+import com.banking.accountservice.dto.AccountResponse;
+import com.banking.accountservice.dto.BalanceResponse;
 import com.banking.accountservice.dto.CreateAccountRequest;
 import com.banking.accountservice.dto.UpdateAccountRequest;
 import com.banking.accountservice.entity.Account;
@@ -26,13 +28,11 @@ public class AccountServiceImpl implements AccountService {
 
     @Override
     @Transactional
-    public Account createAccount(CreateAccountRequest request) {
+    public AccountResponse createAccount(CreateAccountRequest request) {
 
         if (!"INR".equals(request.getCurrency())) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Only INR currency is supported"
-            );
+
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only INR currency is supported");
         }
 
         Account account = new Account();
@@ -41,90 +41,193 @@ public class AccountServiceImpl implements AccountService {
         account.setAccountType(request.getAccountType());
         account.setCurrency(request.getCurrency());
 
-        account.setAccountNumber(
-                "ACC" + accountRepository.generateAccountNumber()
-        );
-//        account.setAccountNumber("ACC" + UUID.randomUUID().toString().replace("-", ""));
+        account.setAccountNumber("ACC" + accountRepository.generateAccountNumber());
+
         account.setBalance(BigDecimal.ZERO);
         account.setAccountStatus(AccountStatus.PENDING_ACTIVATION);
         account.setCreatedAt(LocalDateTime.now());
         account.setUpdatedAt(LocalDateTime.now());
 
-        return accountRepository.save(account);
+        Account savedAccount = accountRepository.save(account);
+
+        return new AccountResponse(
+                savedAccount.getId(),
+                savedAccount.getCustomerId(),
+                savedAccount.getAccountNumber(),
+                savedAccount.getAccountType(),
+                savedAccount.getBalance(),
+                savedAccount.getCurrency(),
+                savedAccount.getAccountStatus(),
+                savedAccount.getCreatedAt(),
+                savedAccount.getUpdatedAt()
+        );
     }
 
     @Override
-    public Account getAccountById(Long id) {
+    public AccountResponse getAccountById(Long id) {
 
         if (id == null || id <= 0) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Account ID must be positive"
-            );
+
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account ID must be positive");
         }
 
-        return accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Account not found with id: " + id
-                ));
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with id: " + id));
+
+        return new AccountResponse(
+                account.getId(),
+                account.getCustomerId(),
+                account.getAccountNumber(),
+                account.getAccountType(),
+                account.getBalance(),
+                account.getCurrency(),
+                account.getAccountStatus(),
+                account.getCreatedAt(),
+                account.getUpdatedAt()
+        );
     }
 
     @Override
-    public Account getByAccountNumber(String accountNumber) {
-        return accountRepository.findByAccountNumber(accountNumber)
-                .orElseThrow(() -> new RuntimeException("Account not found"));
+    public AccountResponse getByAccountNumber(String accountNumber) {
+
+        if (accountNumber == null || accountNumber.isBlank()) {
+
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account number is required");
+        }
+
+        Account account = accountRepository.findByAccountNumber(accountNumber)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with number: " + accountNumber));
+
+        return new AccountResponse(
+                account.getId(),
+                account.getCustomerId(),
+                account.getAccountNumber(),
+                account.getAccountType(),
+                account.getBalance(),
+                account.getCurrency(),
+                account.getAccountStatus(),
+                account.getCreatedAt(),
+                account.getUpdatedAt()
+        );
     }
 
     @Override
-    public List<Account> getMyAccounts(Long customerId) {
+    public List<AccountResponse> getMyAccounts(Long customerId) {
 
-        return accountRepository.findByCustomerId(customerId);
+        return getByCustomerId(customerId);
     }
 
     @Override
-    public List<Account> getByCustomerId(Long customerId) {
+    public List<AccountResponse> getByCustomerId(Long customerId) {
 
-        return accountRepository.findByCustomerId(customerId);
+        if (customerId == null || customerId <= 0) {
+
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Customer ID must be positive");
+        }
+
+        List<Account> accounts = accountRepository.findByCustomerId(customerId);
+
+        return accounts.stream()
+                .map(account -> new AccountResponse(
+                        account.getId(),
+                        account.getCustomerId(),
+                        account.getAccountNumber(),
+                        account.getAccountType(),
+                        account.getBalance(),
+                        account.getCurrency(),
+                        account.getAccountStatus(),
+                        account.getCreatedAt(),
+                        account.getUpdatedAt()
+                ))
+                .toList();
     }
 
     @Override
-    public Page<Account> getAllAccounts(AccountStatus status, AccountType type, Pageable pageable) {
+    public Page<AccountResponse> getAllAccounts(AccountStatus status, AccountType type, Pageable pageable) {
+
+        Page<Account> accounts;
 
         if (status != null && type != null) {
-            return accountRepository.findByAccountStatusAndAccountType(status, type, pageable);
+            accounts = accountRepository.findByAccountStatusAndAccountType(status, type, pageable);
+
+        } else if (status != null) {
+            accounts = accountRepository.findByAccountStatus(status, pageable);
+
+        } else if (type != null) {
+            accounts = accountRepository.findByAccountType(type, pageable);
+
+        } else {
+            accounts = accountRepository.findAll(pageable);
         }
 
-        return accountRepository.findAll(pageable);
+        return accounts.map(account -> new AccountResponse(
+                account.getId(),
+                account.getCustomerId(),
+                account.getAccountNumber(),
+                account.getAccountType(),
+                account.getBalance(),
+                account.getCurrency(),
+                account.getAccountStatus(),
+                account.getCreatedAt(),
+                account.getUpdatedAt()
+        ));
     }
 
     @Override
-    public Account updateAccount(Long id, UpdateAccountRequest request) {
+    public AccountResponse updateAccount(Long id, UpdateAccountRequest request) {
+
+        if (id == null || id <= 0) {
+
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account ID must be positive");
+        }
 
         if (request == null || request.getAccountType() == null) {
+
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account type is required");
         }
 
         if (request.getCurrency() != null && !"INR".equals(request.getCurrency())) {
+
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only INR currency is supported");
         }
 
-        Account account = getAccountById(id);
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with id: " + id));
 
         account.setAccountType(request.getAccountType());
         account.setUpdatedAt(LocalDateTime.now());
 
-        return accountRepository.save(account);
-    }
+        Account savedAccount = accountRepository.save(account);
 
+        return new AccountResponse(
+                savedAccount.getId(),
+                savedAccount.getCustomerId(),
+                savedAccount.getAccountNumber(),
+                savedAccount.getAccountType(),
+                savedAccount.getBalance(),
+                savedAccount.getCurrency(),
+                savedAccount.getAccountStatus(),
+                savedAccount.getCreatedAt(),
+                savedAccount.getUpdatedAt()
+        );
+    }
     @Override
-    public BigDecimal getBalance(Long id) {
+    public BalanceResponse getBalance(Long id) {
+
+        if (id == null || id <= 0) {
+
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account ID must be positive");
+        }
 
         Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND, "Account not found"));
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with id: " + id));
 
-        return account.getBalance();
+        return new BalanceResponse(
+                account.getId(),
+                account.getAccountNumber(),
+                account.getBalance(),
+                account.getCurrency()
+        );
     }
 
 }

@@ -23,5 +23,12 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     Page<Account> findByAccountStatusAndAccountType(AccountStatus status, AccountType type, Pageable pageable);
 
+    Page<Account> findByAccountStatus(
+            AccountStatus status,
+            Pageable pageable);
+
+    Page<Account> findByAccountType(
+            AccountType type,
+            Pageable pageable);
 }
 
