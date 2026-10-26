@@ -1,6 +1,7 @@
 package com.banking.notificationservice.entity;
 
 
+import com.banking.notificationservice.constants.NotificationType;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
@@ -8,6 +9,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
@@ -16,19 +18,21 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Notification {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     @NotNull(message = "recipient id must not be null")
     private Long recipientId;
 
     @Column(nullable = false)
     private String eventId;
 
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private String notificationType;
+    private NotificationType notificationType;
 
     @Column(nullable = false)
     private String title;
@@ -37,7 +41,13 @@ public class Notification {
     private String message;
 
     @Column(nullable = false)
-    private boolean read=false;
+    private boolean read = false;
+
+    @Column(precision = 19, scale = 4)
+    private BigDecimal amount;
+
+    @Column(length = 3)
+    private String currency;
 
     private LocalDateTime createdAt;
 
@@ -47,5 +57,4 @@ public class Notification {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
     }
-
 }

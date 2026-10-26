@@ -20,4 +20,6 @@ public class NotificationResponse {
     private String message;
 
     private LocalDateTime createdAt;
+
+    private boolean read;
 }

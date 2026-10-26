@@ -10,6 +10,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequestMapping("/notification")
 @RequiredArgsConstructor
@@ -19,17 +21,21 @@ public class NotificationController {
     @GetMapping("/getAll")
     public ResponseEntity<Page<NotificationResponse>> getALlNotifications(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String query, @RequestParam(defaultValue = "0") int page
             , @RequestParam(defaultValue = "10") int size, @RequestParam(defaultValue = "createdAt") String sortBy, @RequestParam(defaultValue = "asc") String direction){
-
-        String customerId = jwt.getClaimAsString("customer_id");
-        Long recipientId = Long.valueOf(customerId);
-       return  ResponseEntity.ok(notificationService.searchNotification(query,page,size,sortBy,direction,recipientId));
+       return  ResponseEntity.ok(notificationService.searchNotification(query,page,size,sortBy,direction,jwt));
     }
     @PatchMapping("/markAsRead/{id}")
     public ResponseEntity<Void> markAsRead(@AuthenticationPrincipal Jwt jwt,@PathVariable Long id){
-        String customerId = jwt.getClaimAsString("customer_id");
-        Long recipientId = Long.valueOf(customerId);
-        notificationService.markAsRead(id,recipientId);
+        notificationService.markAsRead(id,jwt);
         return ResponseEntity.noContent().build();
+    }
+    @GetMapping("/get/{id}")
+    public ResponseEntity<NotificationResponse> getNotification(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id){
+       return ResponseEntity.ok(notificationService.getNotificationById(id, jwt));
+    }
+    @PatchMapping("/markAllRead")
+    public ResponseEntity<Map<String,Object>> markAllAsRead(@AuthenticationPrincipal Jwt jwt){
+        int updatedCount=notificationService.markAllAsRead(jwt);
+        return ResponseEntity.ok(Map.of("message","All notifications marked as read","updatedCount",updatedCount));
     }
 
 }
