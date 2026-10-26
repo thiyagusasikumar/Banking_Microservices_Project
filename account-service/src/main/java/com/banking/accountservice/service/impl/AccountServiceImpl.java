@@ -9,7 +9,8 @@ import com.banking.accountservice.dto.UpdateAccountRequest;
 import com.banking.accountservice.entity.Account;
 import com.banking.accountservice.repository.AccountRepository;
 import com.banking.accountservice.service.AccountService;
-import jakarta.transaction.Transactional;
+import com.banking.accountservice.mapper.AccountMapper;
+import org.springframework.transaction.annotation.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -22,6 +23,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository accountRepository;
@@ -29,6 +31,13 @@ public class AccountServiceImpl implements AccountService {
     @Override
     @Transactional
     public AccountResponse createAccount(CreateAccountRequest request) {
+
+        if (request == null || request.getCustomerId() == null || request.getCustomerId() <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Customer ID must be positive");
+        }
+        if (request.getAccountType() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account type is required");
+        }
 
         if (!"INR".equals(request.getCurrency())) {
 
@@ -45,22 +54,13 @@ public class AccountServiceImpl implements AccountService {
 
         account.setBalance(BigDecimal.ZERO);
         account.setAccountStatus(AccountStatus.PENDING_ACTIVATION);
-        account.setCreatedAt(LocalDateTime.now());
-        account.setUpdatedAt(LocalDateTime.now());
+        LocalDateTime now = LocalDateTime.now();
+        account.setCreatedAt(now);
+        account.setUpdatedAt(now);
 
         Account savedAccount = accountRepository.save(account);
 
-        return new AccountResponse(
-                savedAccount.getId(),
-                savedAccount.getCustomerId(),
-                savedAccount.getAccountNumber(),
-                savedAccount.getAccountType(),
-                savedAccount.getBalance(),
-                savedAccount.getCurrency(),
-                savedAccount.getAccountStatus(),
-                savedAccount.getCreatedAt(),
-                savedAccount.getUpdatedAt()
-        );
+        return AccountMapper.toResponse(savedAccount);
     }
 
     @Override
@@ -74,17 +74,7 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with id: " + id));
 
-        return new AccountResponse(
-                account.getId(),
-                account.getCustomerId(),
-                account.getAccountNumber(),
-                account.getAccountType(),
-                account.getBalance(),
-                account.getCurrency(),
-                account.getAccountStatus(),
-                account.getCreatedAt(),
-                account.getUpdatedAt()
-        );
+        return AccountMapper.toResponse(account);
     }
 
     @Override
@@ -98,17 +88,7 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountRepository.findByAccountNumber(accountNumber)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with number: " + accountNumber));
 
-        return new AccountResponse(
-                account.getId(),
-                account.getCustomerId(),
-                account.getAccountNumber(),
-                account.getAccountType(),
-                account.getBalance(),
-                account.getCurrency(),
-                account.getAccountStatus(),
-                account.getCreatedAt(),
-                account.getUpdatedAt()
-        );
+        return AccountMapper.toResponse(account);
     }
 
     @Override
@@ -128,17 +108,7 @@ public class AccountServiceImpl implements AccountService {
         List<Account> accounts = accountRepository.findByCustomerId(customerId);
 
         return accounts.stream()
-                .map(account -> new AccountResponse(
-                        account.getId(),
-                        account.getCustomerId(),
-                        account.getAccountNumber(),
-                        account.getAccountType(),
-                        account.getBalance(),
-                        account.getCurrency(),
-                        account.getAccountStatus(),
-                        account.getCreatedAt(),
-                        account.getUpdatedAt()
-                ))
+                .map(AccountMapper::toResponse)
                 .toList();
     }
 
@@ -160,20 +130,11 @@ public class AccountServiceImpl implements AccountService {
             accounts = accountRepository.findAll(pageable);
         }
 
-        return accounts.map(account -> new AccountResponse(
-                account.getId(),
-                account.getCustomerId(),
-                account.getAccountNumber(),
-                account.getAccountType(),
-                account.getBalance(),
-                account.getCurrency(),
-                account.getAccountStatus(),
-                account.getCreatedAt(),
-                account.getUpdatedAt()
-        ));
+        return accounts.map(AccountMapper::toResponse);
     }
 
     @Override
+    @Transactional
     public AccountResponse updateAccount(Long id, UpdateAccountRequest request) {
 
         if (id == null || id <= 0) {
@@ -194,22 +155,17 @@ public class AccountServiceImpl implements AccountService {
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with id: " + id));
 
+        if (account.getAccountStatus() == AccountStatus.CLOSED
+                || account.getAccountStatus() == AccountStatus.CLOSURE_PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Closing or closed accounts cannot be updated");
+        }
+
         account.setAccountType(request.getAccountType());
         account.setUpdatedAt(LocalDateTime.now());
 
         Account savedAccount = accountRepository.save(account);
 
-        return new AccountResponse(
-                savedAccount.getId(),
-                savedAccount.getCustomerId(),
-                savedAccount.getAccountNumber(),
-                savedAccount.getAccountType(),
-                savedAccount.getBalance(),
-                savedAccount.getCurrency(),
-                savedAccount.getAccountStatus(),
-                savedAccount.getCreatedAt(),
-                savedAccount.getUpdatedAt()
-        );
+        return AccountMapper.toResponse(savedAccount);
     }
     @Override
     public BalanceResponse getBalance(Long id) {

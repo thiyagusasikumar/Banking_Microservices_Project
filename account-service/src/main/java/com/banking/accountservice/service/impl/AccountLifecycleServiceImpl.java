@@ -5,13 +5,14 @@ import com.banking.accountservice.dto.AccountResponse;
 import com.banking.accountservice.dto.AccountStatusHistoryResponse;
 import com.banking.accountservice.entity.Account;
 import com.banking.accountservice.entity.AccountStatusHistory;
+import com.banking.accountservice.mapper.AccountMapper;
 import com.banking.accountservice.repository.AccountRepository;
 import com.banking.accountservice.repository.AccountStatusHistoryRepository;
 import com.banking.accountservice.service.AccountLifecycleService;
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
@@ -20,6 +21,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AccountLifecycleServiceImpl implements AccountLifecycleService {
 
     private final AccountRepository accountRepository;
@@ -28,180 +30,78 @@ public class AccountLifecycleServiceImpl implements AccountLifecycleService {
     @Override
     @Transactional
     public AccountResponse activateAccount(Long id, String reason) {
-
-        if (id == null || id <= 0) {
-
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid account ID");
-        }
-
-        if (reason == null || reason.isBlank()) {
-
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Activation reason is required");
-        }
-
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
-
-        if (account.getAccountStatus() != AccountStatus.PENDING_ACTIVATION) {
-
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only pending accounts can be activated");
-        }
-
-        Account savedAccount = changeStatus(id, AccountStatus.ACTIVE, reason);
-
-        return toResponse(savedAccount);
+        return changeStatus(id, AccountStatus.PENDING_ACTIVATION, AccountStatus.ACTIVE, reason);
     }
 
     @Override
     @Transactional
     public AccountResponse freezeAccount(Long id, String reason) {
-
-        if (id == null || id <= 0) {
-
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid account ID");
-        }
-
-        if (reason == null || reason.isBlank()) {
-
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Freeze reason is required");
-        }
-
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
-
-        if (account.getAccountStatus() != AccountStatus.ACTIVE) {
-
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only active accounts can be frozen");
-        }
-
-        Account savedAccount = changeStatus(id, AccountStatus.FROZEN, reason);
-
-        return toResponse(savedAccount);
+        return changeStatus(id, AccountStatus.ACTIVE, AccountStatus.FROZEN, reason);
     }
 
     @Override
     @Transactional
     public AccountResponse unfreezeAccount(Long id, String reason) {
-
-        if (id == null || id <= 0) {
-
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid account ID");
-        }
-
-        if (reason == null || reason.isBlank()) {
-
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unfreeze reason is required");
-        }
-
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
-
-        if (account.getAccountStatus() != AccountStatus.FROZEN) {
-
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only frozen accounts can be unfrozen");
-        }
-
-        Account savedAccount = changeStatus(id, AccountStatus.ACTIVE, reason);
-
-        return toResponse(savedAccount);
+        return changeStatus(id, AccountStatus.FROZEN, AccountStatus.ACTIVE, reason);
     }
 
     @Override
     @Transactional
     public AccountResponse closeAccount(Long id, String reason) {
-
-        if (id == null || id <= 0) {
-
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid account ID");
-        }
-
-        if (reason == null || reason.isBlank()) {
-
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Closure reason is required");
-        }
-
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
-
-        if (account.getAccountStatus() != AccountStatus.ACTIVE) {
-
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Only active accounts can be closed");
-        }
-
-        if (account.getBalance() == null ||
-                account.getBalance().compareTo(BigDecimal.ZERO) != 0) {
-
-            throw new ResponseStatusException(HttpStatus.CONFLICT, "Account balance must be zero to close");
-        }
-
-        Account savedAccount = changeStatus(id, AccountStatus.CLOSED, reason);
-
-        return toResponse(savedAccount);
+        return changeStatus(id, AccountStatus.ACTIVE, AccountStatus.CLOSED, reason);
     }
+
 
     @Override
     public List<AccountStatusHistoryResponse> getStatusHistory(Long id) {
-
-        if (id == null || id <= 0) {
-
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account ID must be positive");
-        }
-
+        validateId(id);
         if (!accountRepository.existsById(id)) {
-
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with id: " + id);
         }
-
-        List<AccountStatusHistory> history = historyRepository.findByAccountIdOrderByChangedAtDescIdDesc(id);
-
-        return history.stream()
-                .map(status -> new AccountStatusHistoryResponse(
-                        status.getId(),
-                        status.getAccountId(),
-                        status.getPreviousStatus(),
-                        status.getNewStatus(),
-                        status.getReason(),
-                        status.getChangedBy(),
-                        status.getChangedAt()
-                ))
+        return historyRepository.findByAccountIdOrderByChangedAtDescIdDesc(id).stream()
+                .map(history -> new AccountStatusHistoryResponse(
+                        history.getId(), history.getAccountId(), history.getPreviousStatus(),
+                        history.getNewStatus(), history.getReason(), history.getChangedBy(), history.getChangedAt()))
                 .toList();
     }
 
-    private Account changeStatus(Long id, AccountStatus target, String reason) {
-
+    private AccountResponse changeStatus(Long id, AccountStatus expected, AccountStatus target, String reason) {
+        validateId(id);
+        if (reason == null || reason.isBlank() || reason.length() > 500) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Status change reason is required and must not exceed 500 characters");
+        }
         Account account = accountRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with id: " + id));
+        if (account.getAccountStatus() != expected) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Account must be " + expected + " to change status to " + target);
+        }
+        if (target == AccountStatus.CLOSED
+                && (account.getBalance() == null || account.getBalance().compareTo(BigDecimal.ZERO) != 0)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Account balance must be zero to close");
+        }
 
         LocalDateTime now = LocalDateTime.now();
-
         AccountStatusHistory history = new AccountStatusHistory();
         history.setAccountId(account.getId());
         history.setPreviousStatus(account.getAccountStatus());
         history.setNewStatus(target);
-        history.setReason(reason);
+        history.setReason(reason.strip());
+        // Replace with the authenticated actor when security is integrated.
         history.setChangedBy("UNAUTHENTICATED");
         history.setChangedAt(now);
 
         account.setAccountStatus(target);
         account.setUpdatedAt(now);
-
         Account savedAccount = accountRepository.save(account);
         historyRepository.save(history);
-
-        return savedAccount;
+        return AccountMapper.toResponse(savedAccount);
     }
-    private AccountResponse toResponse(Account account) {
 
-        return new AccountResponse(
-                account.getId(),
-                account.getCustomerId(),
-                account.getAccountNumber(),
-                account.getAccountType(),
-                account.getBalance(),
-                account.getCurrency(),
-                account.getAccountStatus(),
-                account.getCreatedAt(),
-                account.getUpdatedAt()
-        );
+    private void validateId(Long id) {
+        if (id == null || id <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account ID must be positive");
+        }
     }
 }

@@ -1,6 +1,8 @@
 package com.banking.accountservice.dto;
 
 import com.banking.accountservice.constant.AccountType;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -9,8 +11,9 @@ import lombok.Setter;
 public class UpdateAccountRequest {
 
 
+    @NotNull(message = "Account type is required")
     private AccountType accountType;
 
-    // Currency may be omitted for an account-type update; supplied values must be INR.
+    @Pattern(regexp = "INR", message = "Only INR currency is supported")
     private String currency;
 }

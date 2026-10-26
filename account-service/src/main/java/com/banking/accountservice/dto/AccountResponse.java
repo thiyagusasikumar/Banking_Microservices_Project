@@ -2,7 +2,6 @@ package com.banking.accountservice.dto;
 
 import com.banking.accountservice.constant.AccountStatus;
 import com.banking.accountservice.constant.AccountType;
-import com.banking.accountservice.entity.Account;
 import lombok.*;
 
 import java.math.BigDecimal;
