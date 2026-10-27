@@ -8,6 +8,7 @@ import com.banking.accountservice.dto.CreateAccountRequest;
 import com.banking.accountservice.dto.UpdateAccountRequest;
 import com.banking.accountservice.entity.Account;
 import com.banking.accountservice.repository.AccountRepository;
+import com.banking.accountservice.repository.AccountStatusHistoryRepository;
 import com.banking.accountservice.service.AccountService;
 import com.banking.accountservice.mapper.AccountMapper;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +28,7 @@ import java.util.List;
 public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository accountRepository;
+    private final AccountStatusHistoryRepository historyRepository;
 
     @Override
     @Transactional
@@ -167,6 +169,20 @@ public class AccountServiceImpl implements AccountService {
 
         return AccountMapper.toResponse(savedAccount);
     }
+    @Override
+    @Transactional
+    public void deleteAccount(Long id) {
+        if (id == null || id <= 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account ID must be positive");
+        }
+
+        Account account = accountRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with id: " + id));
+
+        historyRepository.deleteByAccountId(id);
+        accountRepository.delete(account);
+    }
+
     @Override
     public BalanceResponse getBalance(Long id) {
 

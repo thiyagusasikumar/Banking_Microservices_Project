@@ -83,4 +83,10 @@ public class AccountController {
 
         return ResponseEntity.ok(accountService.getBalance(id));
     }
+
+    @DeleteMapping("/{accountId}")
+    public ResponseEntity<Void> deleteAccount(@PathVariable Long accountId) {
+        accountService.deleteAccount(accountId);
+        return ResponseEntity.noContent().build();
+    }
 }
