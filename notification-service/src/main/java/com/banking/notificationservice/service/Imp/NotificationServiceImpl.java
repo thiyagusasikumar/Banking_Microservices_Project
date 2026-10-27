@@ -32,6 +32,7 @@ public class NotificationServiceImpl implements NotificationService {
 
     private final NotificationRepository notificationRepository;
     private final NotificationMapper notificationMapper;
+    private final NotificationSseService notificationSseService;
 
 
     @Override
@@ -103,7 +104,11 @@ public class NotificationServiceImpl implements NotificationService {
         
         Notification notification = getNotification(event);
 
-        notificationRepository.save(notification);
+        Notification savedNotification = notificationRepository.save(notification);
+        notificationSseService.sendToCustomer(
+                savedNotification.getRecipientId(),
+                notificationMapper.toNotificationResponse(savedNotification)
+        );
     }
 
     private static Notification getNotification(TransactionCompletedEvent event) {
@@ -118,10 +123,13 @@ public class NotificationServiceImpl implements NotificationService {
                         + " for " + event.currency() + " "
                         + event.amount() + " was completed successfully."
         );
+        notification.setCurrency(event.currency());
+        notification.setAmount(event.amount());
         return notification;
     }
 
-    private Long requireCustomerId(Jwt jwt) {
+    @Override
+    public Long requireCustomerId(Jwt jwt) {
         String value = jwt == null ? null : jwt.getClaimAsString("customer_id");
 
         if (value == null || value.isBlank()) {

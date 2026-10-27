@@ -1,11 +1,13 @@
 package com.banking.notificationservice.dto;
 
+import java.math.BigDecimal;
+
 public record TransactionCompletedEvent (
         String eventId,
         Long customerId,
         String transactionId,
         String status,
-        String amount,
+        BigDecimal amount,
         String currency
 ){
 }

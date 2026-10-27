@@ -18,4 +18,6 @@ public interface NotificationService {
     int markAllAsRead(Jwt jwt);
 
     void createFromTransactionEvent(TransactionCompletedEvent transactionCompletedEvent);
+
+    Long requireCustomerId(Jwt jwt);
 }
