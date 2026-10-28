@@ -17,5 +17,6 @@ public class CreateAccountRequest {
     private AccountType accountType;
 
     @NotBlank(message = "Currency is required")
+    @Pattern(regexp = "INR", message = "Only INR currency is supported")
     private String currency;
 }

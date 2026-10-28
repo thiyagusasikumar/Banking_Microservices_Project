@@ -2,28 +2,30 @@ package com.banking.accountservice.service;
 
 
 import com.banking.accountservice.constant.AccountStatus;
-import com.banking.accountservice.dto.CreateAccountRequest;
-import com.banking.accountservice.dto.UpdateAccountRequest;
-import com.banking.accountservice.entity.Account;
+import com.banking.accountservice.constant.AccountType;
+import com.banking.accountservice.dto.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 
-import java.math.BigDecimal;
 import java.util.List;
 
 public interface AccountService {
 
-    Account createAccount(CreateAccountRequest request);
+    AccountResponse createAccount(CreateAccountRequest request);
 
-    Account getAccountById(Long id);
+    AccountResponse getAccountById(Long id);
 
-    List<Account> getAllAccount();
+    AccountResponse getByAccountNumber(String accountNumber);
 
-    BigDecimal getBalance(Long id);
+    List<AccountResponse> getMyAccounts(Long customerId);
 
-    Account updateStatus(Long id, AccountStatus status);
+    List<AccountResponse> getByCustomerId(Long customerId);
 
-    List<Account> getAccountByCustomerId(Long customerId);
+    Page<AccountResponse> getAllAccounts(AccountStatus status, AccountType type, Pageable pageable);
 
-    String deleteAccount(Long id);
+    AccountResponse updateAccount(Long id, UpdateAccountRequest request);
 
-    Account updateAccount(Long id, UpdateAccountRequest request);
+    BalanceResponse getBalance(Long id);
+
+    void deleteAccount(Long id);
 }
