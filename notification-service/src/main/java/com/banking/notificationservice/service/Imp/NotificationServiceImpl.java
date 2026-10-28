@@ -143,6 +143,12 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    @Override
+    public long getUnreadCount(Jwt jwt) {
+        Long recipientId=requireCustomerId(jwt);
+        return notificationRepository.countByRecipientIdAndReadFalse(recipientId);
+    }
+
     private void requireValidNotificationId(Long id) {
         if (id == null || id < 1) {
             throw new IllegalArgumentException("Notification ID must be a positive number.");

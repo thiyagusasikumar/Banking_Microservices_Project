@@ -1,4 +1,4 @@
-package com.banking.notificationservice.cotroller;
+package com.banking.notificationservice.controller;
 
 import com.banking.notificationservice.service.Imp.NotificationSseService;
 import com.banking.notificationservice.service.NotificationService;

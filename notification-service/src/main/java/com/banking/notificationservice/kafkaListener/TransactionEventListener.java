@@ -1,4 +1,4 @@
-package com.banking.notificationservice.kafka;
+package com.banking.notificationservice.kafkaListener;
 
 
 import com.banking.notificationservice.dto.TransactionCompletedEvent;
@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 @RequiredArgsConstructor
 @Component
 @Slf4j
-public class TransactionEventConsumer {
+public class TransactionEventListener {
     private final ObjectMapper objectMapper;
     private final NotificationService notificationService;
 

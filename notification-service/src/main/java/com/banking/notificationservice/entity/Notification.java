@@ -3,7 +3,6 @@ package com.banking.notificationservice.entity;
 
 import com.banking.notificationservice.constants.NotificationType;
 import jakarta.persistence.*;
-import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -24,7 +23,6 @@ public class Notification {
     private Long id;
 
     @Column(nullable = false)
-    @NotNull(message = "recipient id must not be null")
     private Long recipientId;
 
     @Column(nullable = false)

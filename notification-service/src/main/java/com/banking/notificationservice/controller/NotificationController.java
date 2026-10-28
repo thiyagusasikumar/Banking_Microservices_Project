@@ -1,4 +1,4 @@
-package com.banking.notificationservice.cotroller;
+package com.banking.notificationservice.controller;
 
 
 import com.banking.notificationservice.dto.NotificationResponse;
@@ -36,6 +36,10 @@ public class NotificationController {
     public ResponseEntity<Map<String,Object>> markAllAsRead(@AuthenticationPrincipal Jwt jwt){
         int updatedCount=notificationService.markAllAsRead(jwt);
         return ResponseEntity.ok(Map.of("message","All notifications marked as read","updatedCount",updatedCount));
+    }
+    @GetMapping("/getUnreadCount")
+    public ResponseEntity<Long> getUnreadCount(@AuthenticationPrincipal Jwt jwt){
+        return ResponseEntity.ok(notificationService.getUnreadCount(jwt));
     }
 
 }
