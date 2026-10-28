@@ -10,11 +10,14 @@ import com.banking.authservice.exception.AccountNotActiveException;
 import com.banking.authservice.exception.DuplicateUserException;
 import com.banking.authservice.exception.AuthenticationFailedException;
 import com.banking.authservice.exception.InvalidCredentialsException;
+import com.banking.authservice.exception.KeyCloakCreationException;
 
 
 import com.banking.authservice.mapper.UserMapper;
 import com.banking.authservice.repository.UserRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -31,10 +34,9 @@ import org.springframework.web.client.RestClientException;
 import java.util.Locale;
 import java.util.Set;
 
-
+@Slf4j
 @Service
 public class AuthService {
-
     public static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id","userName","email","role","status");
 
     @Value("${keycloak.server-url}")
@@ -74,7 +76,7 @@ public class AuthService {
     }
 
     public RegisterResponse registerEmployee(RegisterEmployeeRequest request) {
-        userIsAvailable(request.getUseName(), request.getEmail());
+        userIsAvailable(request.getUserName(), request.getEmail());
 
         EmployeeRoles role;
         try {
@@ -86,7 +88,7 @@ public class AuthService {
         }
 
         String keycloakUserId = keycloakUserService.createEmployee(request,role);
-       return saveUser(keycloakUserId, request.getUseName(), request.getEmail(),
+       return saveUser(keycloakUserId, request.getUserName(), request.getEmail(),
                 request.getFirstName(), request.getLastName(), Roles.valueOf(role.name()));
     }
 
@@ -214,36 +216,75 @@ public class AuthService {
     }
     public void deactivateUser(String keycloakUserId)
     {
-       User user=userRepository.findByKeycloakUserId(keycloakUserId).orElseThrow(()->new UsernameNotFoundException("User not found"));
-        if(user.getStatus().equals(UserStatus.INACTIVE))
-        {
-            throw new InvalidCredentialsException("User is inactive");
-        }
-        keycloakUserService.deactivateUser(keycloakUserId);
-        user.setStatus(UserStatus.INACTIVE);
-        userRepository.save(user);
+        User user = userRepository.findByKeycloakUserId(keycloakUserId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        updateUserStatus(user, UserStatus.INACTIVE);
     }
-    public void activateUserByAdmin(Long userId)
-    {
-        User user=userRepository.findById(userId).orElseThrow(()->new UsernameNotFoundException("User not found"));
-        if(user.getStatus().equals(UserStatus.ACTIVE))
-        {
-            throw new InvalidCredentialsException("User is active");
-        } keycloakUserService.activateUser(user.getKeycloakUserId());
-        user.setStatus(UserStatus.ACTIVE);
-        userRepository.save(user);
-    }
-    public void deactivateUserByAdmin(Long userId)
-    {
-        User user=userRepository.findById(userId).orElseThrow(()->new UsernameNotFoundException("User not found"));
-        if(user.getStatus().equals(UserStatus.INACTIVE))
-        {
-            throw new InvalidCredentialsException("User is inactive");
-        }
-        keycloakUserService.deactivateUser(user.getKeycloakUserId());
 
-        user.setStatus(UserStatus.INACTIVE);
-        userRepository.save(user);
+    public void activateUserByAdmin(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        updateUserStatus(user, UserStatus.ACTIVE);
+    }
+
+    public void deactivateUserByAdmin(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        updateUserStatus(user, UserStatus.INACTIVE);
+    }
+
+    private void updateUserStatus(User user, UserStatus newStatus) {
+        UserStatus previousStatus = user.getStatus();
+        if (previousStatus == newStatus) {
+            throw new InvalidCredentialsException(
+                    newStatus == UserStatus.ACTIVE ? "User is active" : "User is inactive"
+            );
+        }
+
+        String keycloakUserId = user.getKeycloakUserId();
+        try {
+            setKeycloakStatus(keycloakUserId, newStatus);
+        } catch (KeyCloakCreationException ex) {
+            log.error(
+                    "Could not change Keycloak account status; userId={}, status={}",
+                    keycloakUserId,
+                    newStatus,
+                    ex
+            );
+            throw ex;
+        }
+
+        user.setStatus(newStatus);
+        try {
+            userRepository.save(user);
+        } catch (DataAccessException ex) {
+            user.setStatus(previousStatus);
+            log.error(
+                    "Could not persist account status; userId={}, status={}",
+                    keycloakUserId,
+                    newStatus,
+                    ex
+            );
+            try {
+                setKeycloakStatus(keycloakUserId, previousStatus);
+            } catch (RuntimeException compensationFailure) {
+                ex.addSuppressed(compensationFailure);
+                log.error(
+                        "Could not restore Keycloak status after local status update failed; userId={}",
+                        keycloakUserId,
+                        compensationFailure
+                );
+            }
+            throw ex;
+        }
+    }
+
+    private void setKeycloakStatus(String keycloakUserId, UserStatus status) {
+        if (status == UserStatus.ACTIVE) {
+            keycloakUserService.activateUser(keycloakUserId);
+        } else {
+            keycloakUserService.deactivateUser(keycloakUserId);
+        }
     }
     public Page<AdminUserResponse> searchUsers(String query,int page,int size,String sortBy,String direction){
       if(page < 0)

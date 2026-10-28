@@ -67,7 +67,7 @@ public class KeycloakUserService {
     }
 
     private UserRepresentation getUser(RegisterEmployeeRequest request) {
-        return buildUser(request.getUseName(), request.getEmail(), request.getFirstName(), request.getLastName(), request.getPassword());
+        return buildUser(request.getUserName(), request.getEmail(), request.getFirstName(), request.getLastName(), request.getPassword());
     }
 
     private UserRepresentation buildUser(
@@ -217,32 +217,24 @@ public class KeycloakUserService {
         userResource.update(representation);
     }
     public void deactivateUser(String keycloakUserId) {
-        UserResource userResource = keycloak
-                .realm(realm)
-                .users()
-                .get(keycloakUserId);
-
-        UserRepresentation representation =
-                userResource.toRepresentation();
-
-        if (representation == null) {
-            throw new UsernameNotFoundException("User not found");
-        }
-        representation.setEnabled(false);
-        userResource.update(representation);
+        setUserEnabled(keycloakUserId, false);
     }
-    public void activateUser(String keycloakUserId) {
-        UserResource userResource = keycloak
-                .realm(realm)
-                .users()
-                .get(keycloakUserId);
 
-        UserRepresentation representation =
-                userResource.toRepresentation();
-        if (representation == null) {
-            throw new UsernameNotFoundException("User not found");
+    public void activateUser(String keycloakUserId) {
+        setUserEnabled(keycloakUserId, true);
+    }
+
+    private void setUserEnabled(String keycloakUserId, boolean enabled) {
+        try {
+            UserResource userResource = keycloak.realm(realm).users().get(keycloakUserId);
+            UserRepresentation representation = userResource.toRepresentation();
+            if (representation == null) {
+                throw new UsernameNotFoundException("User not found");
+            }
+            representation.setEnabled(enabled);
+            userResource.update(representation);
+        } catch (WebApplicationException | ProcessingException ex) {
+            throw new KeyCloakCreationException("Identity provider could not update user status", ex);
         }
-        representation.setEnabled(true);
-        userResource.update(representation);
     }
 }
