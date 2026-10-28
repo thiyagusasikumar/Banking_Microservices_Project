@@ -12,7 +12,7 @@ public class CurrentUserResponse {
 
     private String keycloakUserId;
 
-    private String username;
+    private String userName;
 
     private String email;
 
