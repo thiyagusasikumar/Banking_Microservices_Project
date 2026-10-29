@@ -10,6 +10,8 @@ import com.banking.accountservice.dto.UpdateAccountRequest;
 import com.banking.accountservice.service.AccountService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
@@ -27,12 +29,25 @@ public class AccountController {
 
     private final AccountService accountService;
 
+//    @PostMapping
+//    public ResponseEntity<AccountResponse> createAccount(
+//            @Valid @RequestBody CreateAccountRequest request,
+//            @AuthenticationPrincipal  Jwt jwt) {
+//        // Ignore any customerId from the client; bind ownership to the authenticated customer.
+//        request.setCustomerId(getCustomerId(jwt));
+//        AccountResponse response = accountService.createAccount(request);
+//        return ResponseEntity.created(ServletUriComponentsBuilder.fromCurrentRequest()
+//                .path("/{accountId}").buildAndExpand(response.getId()).toUri()).body(response);
+//    }
+
     @PostMapping
-    public ResponseEntity<AccountResponse> createAccount(@Valid @RequestBody CreateAccountRequest request) {
+    public ResponseEntity<AccountResponse> createAccount(@Valid @RequestBody CreateAccountRequest request, @AuthenticationPrincipal Jwt jwt) {
+
+        request.setCustomerId(getCustomerId(jwt));
 
         AccountResponse response = accountService.createAccount(request);
-        return ResponseEntity.created(ServletUriComponentsBuilder.fromCurrentRequest()
-                .path("/{accountId}").buildAndExpand(response.getId()).toUri()).body(response);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @GetMapping("/{accountId}")
@@ -48,9 +63,13 @@ public class AccountController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<List<AccountResponse>> getMyAccounts(@RequestParam Long customerId) {
+    public ResponseEntity<List<AccountResponse>> getMyAccounts(@AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(accountService.getMyAccounts(getCustomerId(jwt)));
+    }
 
-        return ResponseEntity.ok(accountService.getMyAccounts(customerId));
+    @GetMapping("/me/customer-id")
+    public ResponseEntity<java.util.Map<String, Long>> getCurrentCustomerId(@AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(java.util.Map.of("customerId", getCustomerId(jwt)));
     }
 
     @GetMapping("/customer/{customerId}")
@@ -88,5 +107,19 @@ public class AccountController {
     public ResponseEntity<Void> deleteAccount(@PathVariable Long accountId) {
         accountService.deleteAccount(accountId);
         return ResponseEntity.noContent().build();
+    }
+
+    private Long getCustomerId(Jwt jwt) {
+        String customerIdClaim = jwt.getClaimAsString("customer_id");
+        try {
+            long customerId = Long.parseLong(customerIdClaim);
+            if (customerId <= 0) {
+                throw new NumberFormatException("customer_id must be positive");
+            }
+            return customerId;
+        } catch (NumberFormatException | NullPointerException ex) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Access token is missing a valid customer_id claim", ex);
+        }
     }
 }
