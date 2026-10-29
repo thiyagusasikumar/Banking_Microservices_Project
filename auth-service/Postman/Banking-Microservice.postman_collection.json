@@ -128,7 +128,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"username\": \"manoj\",\r\n  \"email\": \"manoj@example.com\",\r\n  \"password\": \"manoj@123\",\r\n  \"firstName\": \"manoj\",\r\n  \"lastName\": \"manoj\"\r\n}",
+              "raw": "{\r\n  \"userName\": \"manoj\",\r\n  \"email\": \"manoj@example.com\",\r\n  \"password\": \"manoj@123\",\r\n  \"firstName\": \"manoj\",\r\n  \"lastName\": \"manoj\",\r\n  \"phoneNumber\": \"+14155550123\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -230,7 +230,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\r\n  \"userName\": \"vijay\",\r\n  \"email\": \"vijay@example.com\",\r\n  \"password\": \"vijay@123\",\r\n  \"firstName\": \"vijay\",\r\n  \"lastName\": \"V\",\r\n   \"role\":\"marker\"\r\n}",
+              "raw": "{\r\n  \"userName\": \"vijay\",\r\n  \"email\": \"vijay@example.com\",\r\n  \"password\": \"vijay@123\",\r\n  \"firstName\": \"vijay\",\r\n  \"lastName\": \"V\",\r\n  \"phoneNumber\": \"+14155550124\",\r\n  \"role\":\"marker\"\r\n}",
               "options": {
                 "raw": {
                   "language": "json"

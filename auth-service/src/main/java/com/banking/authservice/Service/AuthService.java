@@ -2,9 +2,12 @@ package com.banking.authservice.Service;
 
 
 import com.banking.authservice.constants.EmployeeRoles;
+import com.banking.authservice.constants.RegistrationAttemptStatus;
+import com.banking.authservice.constants.RegistrationType;
 import com.banking.authservice.constants.Roles;
 import com.banking.authservice.constants.UserStatus;
 import com.banking.authservice.dto.*;
+import com.banking.authservice.entity.RegistrationAttempt;
 import com.banking.authservice.entity.User;
 import com.banking.authservice.exception.AccountNotActiveException;
 import com.banking.authservice.exception.DuplicateUserException;
@@ -15,7 +18,9 @@ import com.banking.authservice.exception.KeyCloakCreationException;
 
 import com.banking.authservice.mapper.UserMapper;
 import com.banking.authservice.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.domain.Page;
@@ -32,10 +37,12 @@ import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
 import java.util.Locale;
+import java.util.Optional;
 import java.util.Set;
 
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AuthService {
     public static final Set<String> ALLOWED_SORT_FIELDS = Set.of("id","userName","email","role","status");
 
@@ -58,26 +65,54 @@ public class AuthService {
     private final KeycloakUserService keycloakUserService;
     private final RestClient restClient;
     private final UserMapper userMapper;
+    private final RegistrationAttemptService registrationAttemptService;
+    private final RegistrationReconciliationService registrationReconciliationService;
 
-    public AuthService(UserRepository userRepository, KeycloakUserService keycloakUserService, RestClient restClient, UserMapper userMapper) {
-        this.userRepository = userRepository;
-        this.keycloakUserService = keycloakUserService;
-        this.restClient = restClient;
-        this.userMapper = userMapper;
-    }
 
     public RegisterResponse register(RegisterRequest request) {
-        userIsAvailable(request.getUserName(), request.getEmail());
+        RegistrationAttempt attempt = findOrStartRegistrationAttempt(
+                request.getUserName(),
+                request.getEmail(),
+                RegistrationType.CUSTOMER,
+                Roles.CUSTOMER
+        );
 
-        String keycloakUserId = keycloakUserService.createUser(request);
+        Optional<UserRepresentation> keycloakUser=keycloakUserService.findUserByRegistrationAttempt(attempt.getAttemptId());
+        if(keycloakUser.isPresent()){
+           keycloakUserService.verifyCredentials(
+                   request.getUserName(),
+                   request.getPassword()
+           );
+           return registrationReconciliationService.reconcileAttempt(attempt);
+        }
+        String keycloakUserId;
+        try {
+            keycloakUserId = keycloakUserService.createUser(
+                    request,
+                    attempt.getAttemptId()
+            );
+        } catch (DuplicateUserException ex) {
+            return reconcileDuplicateRegistration(
+                    attempt,
+                    ex,
+                    request.getUserName(),
+                    request.getPassword(),
+                    true
+            );
+        }
+        registrationAttemptService.updateKeycloakUserId(
+                attempt.getAttemptId(),
+                keycloakUserId
+        );
 
-        return saveUser(keycloakUserId, request.getUserName(), request.getEmail(),
-                request.getFirstName(), request.getLastName(), Roles.CUSTOMER);
+        User user= saveUser(keycloakUserId, request.getUserName(), request.getEmail(),
+                request.getFirstName(), request.getLastName(), request.getPhoneNumber(), Roles.CUSTOMER);
+
+         updateCustomerId(user,attempt);
+        return  userMapper.toRegisterResponse(user);
     }
 
     public RegisterResponse registerEmployee(RegisterEmployeeRequest request) {
-        userIsAvailable(request.getUserName(), request.getEmail());
-
         EmployeeRoles role;
         try {
             role = EmployeeRoles.valueOf(
@@ -86,10 +121,87 @@ public class AuthService {
         } catch (IllegalArgumentException | NullPointerException ex) {
             throw new IllegalArgumentException("Invalid employee role");
         }
+       RegistrationAttempt attempt = findOrStartRegistrationAttempt(
+               request.getUserName(),
+               request.getEmail(),
+               RegistrationType.EMPLOYEE,
+               Roles.valueOf(role.name())
+       );
 
-        String keycloakUserId = keycloakUserService.createEmployee(request,role);
-       return saveUser(keycloakUserId, request.getUserName(), request.getEmail(),
-                request.getFirstName(), request.getLastName(), Roles.valueOf(role.name()));
+       Optional<UserRepresentation> keycloakUser =
+               keycloakUserService.findUserByRegistrationAttempt(attempt.getAttemptId());
+       if (keycloakUser.isPresent()) {
+           return registrationReconciliationService.reconcileAttempt(attempt);
+       }
+
+       String keycloakUserId;
+       try {
+           keycloakUserId = keycloakUserService.createEmployee(
+                   request,
+                   role,
+                   attempt.getAttemptId()
+           );
+       } catch (DuplicateUserException ex) {
+           return reconcileDuplicateRegistration(
+                   attempt,
+                   ex,
+                   request.getUserName(),
+                   request.getPassword(),
+                   false
+           );
+       }
+       registrationAttemptService.updateKeycloakUserId(
+               attempt.getAttemptId(),
+               keycloakUserId
+       );
+       User user=saveUser(keycloakUserId, request.getUserName(), request.getEmail(),
+               request.getFirstName(), request.getLastName(), request.getPhoneNumber(),
+               Roles.valueOf(role.name()));
+
+        updateCustomerId(user,attempt);
+
+       return userMapper.toRegisterResponse(user);
+    }
+
+    private RegistrationAttempt findOrStartRegistrationAttempt(
+           String userName,
+          String email,
+          RegistrationType registrationType,
+          Roles registrationRole
+    ) {
+       Optional<RegistrationAttempt> incompleteAttempt =
+              registrationAttemptService.findIncompleteAttempt(userName, registrationType);
+       if (incompleteAttempt.isPresent()) {
+           return incompleteAttempt.get();
+       }
+
+       userIsAvailable(userName, email);
+       return registrationAttemptService.startRegistrationAttempt(
+               userName,
+               registrationType,
+               registrationRole
+       );
+    }
+
+    private RegisterResponse reconcileDuplicateRegistration(
+           RegistrationAttempt attempt,
+           DuplicateUserException exception,
+           String userName,
+           String password,
+           boolean verifyCredentials
+    ) {
+       if (keycloakUserService.findUserByRegistrationAttempt(attempt.getAttemptId()).isPresent()) {
+           if (verifyCredentials) {
+               keycloakUserService.verifyCredentials(userName, password);
+           }
+           return registrationReconciliationService.reconcileAttempt(attempt);
+       }
+
+       registrationAttemptService.updateStatus(
+               attempt.getAttemptId(),
+               RegistrationAttemptStatus.FAILED
+       );
+       throw exception;
     }
 
     private void userIsAvailable(String userName, String email) {
@@ -102,18 +214,36 @@ public class AuthService {
         }
     }
 
-    private RegisterResponse saveUser(String keycloakUserId, String username, String email, String firstName, String lastName, Roles role) {
+    private User saveUser(
+            String keycloakUserId,
+            String username,
+            String email,
+            String firstName,
+            String lastName,
+            String phoneNumber,
+            Roles role) {
         User user = new User();
         user.setKeycloakUserId(keycloakUserId);
         user.setUserName(username);
         user.setEmail(email);
         user.setFirstName(firstName);
         user.setLastName(lastName);
+        user.setPhoneNumber(phoneNumber);
         user.setRole(role);
-        userRepository.save(user);
+        return userRepository.save(user);
+    }
+    public void updateCustomerId(User user, RegistrationAttempt attempt) {
         Long customerId = user.getId();
+        String keycloakUserId=user.getKeycloakUserId();
+
+        registrationAttemptService.updateLocalUserId(attempt.getAttemptId(), customerId);
+
         keycloakUserService.updateCustomerIdAttribute(customerId,keycloakUserId);
-        return userMapper.toRegisterResponse(user);
+
+        registrationAttemptService.updateStatus(
+                attempt.getAttemptId(),
+                RegistrationAttemptStatus.COMPLETED
+        );
     }
 
     public LoginResponse login(LoginRequest loginRequest)  {

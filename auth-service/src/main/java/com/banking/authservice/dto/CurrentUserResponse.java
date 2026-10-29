@@ -16,4 +16,6 @@ public class CurrentUserResponse {
 
     private String email;
 
+    private String phoneNumber;
+
 }
