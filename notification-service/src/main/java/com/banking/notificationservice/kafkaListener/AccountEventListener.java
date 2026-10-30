@@ -19,7 +19,7 @@ public class AccountEventListener {
 
 
     @KafkaListener(topics = "account-events")
-    public void consume (String message) throws JsonProcessingException {
+    public void consume(String message) throws JsonProcessingException {
         log.info("Received account event: {}", message);
 
         AccountCreatedEvent accountCreatedEvent = objectMapper.readValue(message, AccountCreatedEvent.class);

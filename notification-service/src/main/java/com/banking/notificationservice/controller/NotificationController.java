@@ -20,25 +20,29 @@ public class NotificationController {
 
     @GetMapping("/getAll")
     public ResponseEntity<Page<NotificationResponse>> getALlNotifications(@AuthenticationPrincipal Jwt jwt, @RequestParam(required = false) String query, @RequestParam(defaultValue = "0") int page
-            , @RequestParam(defaultValue = "10") int size, @RequestParam(defaultValue = "createdAt") String sortBy, @RequestParam(defaultValue = "asc") String direction){
-       return  ResponseEntity.ok(notificationService.searchNotification(query,page,size,sortBy,direction,jwt));
+            , @RequestParam(defaultValue = "10") int size, @RequestParam(defaultValue = "createdAt") String sortBy, @RequestParam(defaultValue = "asc") String direction) {
+        return ResponseEntity.ok(notificationService.searchNotification(query, page, size, sortBy, direction, jwt));
     }
+
     @PatchMapping("/markAsRead/{id}")
-    public ResponseEntity<Void> markAsRead(@AuthenticationPrincipal Jwt jwt,@PathVariable Long id){
-        notificationService.markAsRead(id,jwt);
+    public ResponseEntity<Void> markAsRead(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
+        notificationService.markAsRead(id, jwt);
         return ResponseEntity.noContent().build();
     }
+
     @GetMapping("/get/{id}")
-    public ResponseEntity<NotificationResponse> getNotification(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id){
-       return ResponseEntity.ok(notificationService.getNotificationById(id, jwt));
+    public ResponseEntity<NotificationResponse> getNotification(@AuthenticationPrincipal Jwt jwt, @PathVariable Long id) {
+        return ResponseEntity.ok(notificationService.getNotificationById(id, jwt));
     }
+
     @PatchMapping("/markAllRead")
-    public ResponseEntity<Map<String,Object>> markAllAsRead(@AuthenticationPrincipal Jwt jwt){
-        int updatedCount=notificationService.markAllAsRead(jwt);
-        return ResponseEntity.ok(Map.of("message","All notifications marked as read","updatedCount",updatedCount));
+    public ResponseEntity<Map<String, Object>> markAllAsRead(@AuthenticationPrincipal Jwt jwt) {
+        int updatedCount = notificationService.markAllAsRead(jwt);
+        return ResponseEntity.ok(Map.of("message", "All notifications marked as read", "updatedCount", updatedCount));
     }
+
     @GetMapping("/getUnreadCount")
-    public ResponseEntity<Long> getUnreadCount(@AuthenticationPrincipal Jwt jwt){
+    public ResponseEntity<Long> getUnreadCount(@AuthenticationPrincipal Jwt jwt) {
         return ResponseEntity.ok(notificationService.getUnreadCount(jwt));
     }
 
