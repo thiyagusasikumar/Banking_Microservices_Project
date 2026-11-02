@@ -16,6 +16,10 @@ import java.time.LocalDateTime;
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(
+        name = "notifications", uniqueConstraints = {@UniqueConstraint(
+                        name = "uk_notification_event_recipient", columnNames = {"event_id", "recipient_id"})}
+)
 public class Notification {
 
     @Id
@@ -47,6 +51,7 @@ public class Notification {
     @Column(length = 3)
     private String currency;
 
+    @Column(nullable = false)
     private LocalDateTime createdAt;
 
     private LocalDateTime readAt;

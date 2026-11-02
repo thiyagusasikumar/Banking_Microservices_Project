@@ -2,6 +2,7 @@ package com.banking.notificationservice.service.Imp;
 
 
 import com.banking.notificationservice.constants.NotificationType;
+import com.banking.notificationservice.dto.AccountEvent;
 import com.banking.notificationservice.dto.NotificationResponse;
 import com.banking.notificationservice.dto.TransactionEvent;
 import com.banking.notificationservice.entity.Notification;
@@ -74,6 +75,13 @@ public class NotificationServiceImpl implements NotificationService {
     }
 
     @Override
+    @Transactional
+    public int markAllAsRead(Jwt jwt) {
+        Long recipientId = requireCustomerId(jwt);
+        return notificationRepository.markAllAsRead(recipientId, LocalDateTime.now());
+    }
+
+    @Override
     public NotificationResponse getNotificationById(Long id, Jwt jwt) {
         requireValidNotificationId(id);
         Long recipientId = requireCustomerId(jwt);
@@ -86,12 +94,6 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationMapper.toNotificationResponse(notification);
     }
 
-    @Override
-    @Transactional
-    public int markAllAsRead(Jwt jwt) {
-        Long recipientId = requireCustomerId(jwt);
-        return notificationRepository.markAllAsRead(recipientId, LocalDateTime.now());
-    }
 
     @Override
     public void createFromTransactionEvent(TransactionEvent event) {
@@ -129,6 +131,26 @@ public class NotificationServiceImpl implements NotificationService {
         }
     }
 
+    @Override
+    public void createAccountEvent(AccountEvent event) {
+        if (event == null
+                || event.eventId() == null
+                || event.eventId().isBlank()
+                || event.customerId() == null
+                || event.eventType() == null
+                || event.eventType().isBlank()) {
+            throw new ForbiddenOperationException("Invalid Transaction Event");
+        }
+        NotificationType type = setNotificationType(event.eventType());
+        if (!notificationRepository.existsByEventIdAndRecipientId(event.eventId(), event.customerId())) {
+            Notification savedNotification = notificationRepository.save(getNotification(event, type));
+            notificationSseService.sendToCustomer(
+                    savedNotification.getRecipientId(),
+                    notificationMapper.toNotificationResponse(savedNotification)
+            );
+        }
+    }
+
     private Notification getNotification(TransactionEvent event, NotificationType notificationType) {
         Notification notification = new Notification();
         notification.setRecipientId(event.customerId());
@@ -138,13 +160,25 @@ public class NotificationServiceImpl implements NotificationService {
             case AMOUNT_DEPOSITED -> "Deposit Completed";
             case AMOUNT_WITHDRAWN -> "Withdrawal Completed";
             case MONEY_RECEIVED -> "Money Received";
-            case ACCOUNT_CREATED -> "Account Created";
-            case ACCOUNT_BLOCKED -> "Account Blocked";
             default -> "Transaction Completed";
         });
         notification.setMessage(setNotificationMessage(event, notificationType));
         notification.setCurrency(event.currency());
         notification.setAmount(event.amount());
+        return notification;
+    }
+
+    private Notification getNotification(AccountEvent event, NotificationType notificationType) {
+        Notification notification = new Notification();
+        notification.setRecipientId(event.customerId());
+        notification.setEventId(event.eventId());
+        notification.setNotificationType(notificationType);
+        notification.setTitle(switch (notificationType) {
+            case ACCOUNT_CREATED -> "Account Created";
+            case ACCOUNT_BLOCKED -> "Account Blocked";
+            default -> "Transaction Completed";
+        });
+        notification.setMessage(setNotificationMessage(event, notificationType));
         return notification;
     }
 
@@ -191,6 +225,18 @@ public class NotificationServiceImpl implements NotificationService {
         };
     }
 
+    private String setNotificationMessage(AccountEvent event, NotificationType notificationType) {
+        String maskedAccountNumber = maskAccountNumber(event.accountNumber());
+        String message = "Your account ending in "
+                + maskedAccountNumber
+                + " was created successfully.";
+        return switch (notificationType) {
+            case ACCOUNT_CREATED -> message + " was created successfully.";
+            case ACCOUNT_BLOCKED -> message + " was blocked successfully.";
+            default -> " Account  event was completed successfully.";
+        };
+    }
+
     @Override
     public Long requireCustomerId(Jwt jwt) {
         String value = jwt == null ? null : jwt.getClaimAsString("customer_id");
@@ -212,10 +258,19 @@ public class NotificationServiceImpl implements NotificationService {
         return notificationRepository.countByRecipientIdAndReadFalse(recipientId);
     }
 
+
     private void requireValidNotificationId(Long id) {
         if (id == null || id < 1) {
             throw new IllegalArgumentException("Notification ID must be a positive number.");
         }
+    }
+
+    private String maskAccountNumber(String accountNumber) {
+        if (accountNumber == null || accountNumber.length() <= 4) {
+            return "****";
+        }
+
+        return "****" + accountNumber.substring(accountNumber.length() - 4);
     }
 
 }
