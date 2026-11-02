@@ -9,4 +9,5 @@ public enum NotificationType {
     SECURITY_ALERT,
     AMOUNT_DEPOSITED,
     AMOUNT_WITHDRAWN,
+    REGISTRATION_COMPLETED,
 }

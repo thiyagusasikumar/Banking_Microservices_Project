@@ -39,6 +39,14 @@ public class Notification {
     @Column(nullable = false)
     private String title;
 
+    private String accountType;
+
+    private String transactionId;
+
+    private Long accountId;
+
+    private LocalDateTime occurredAt;
+
     @Column(nullable = false, columnDefinition = "TEXT")
     private String message;
 

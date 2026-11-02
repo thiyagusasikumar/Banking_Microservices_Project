@@ -19,8 +19,6 @@ public class TransactionEventListener {
 
     @KafkaListener(topics = "transaction-events")
     public void consume(String message) throws JsonProcessingException {
-        log.info("Received transaction event: {}", message);
-
         TransactionEvent transactionEvent = objectMapper.readValue(message, TransactionEvent.class);
         if (transactionEvent == null || transactionEvent.eventType() == null) {
             log.warn("Ignoring transaction event without an event type");
@@ -33,10 +31,13 @@ public class TransactionEventListener {
                     "WITHDRAWAL", "AMOUNT_WITHDRAWN", "MONEY_RECEIVED" -> true;
             default -> false;
         }) {
-            log.debug("Ignoring unsupported transaction event type: {}", transactionEvent.eventType());
+            log.debug("Ignoring unsupported transaction event type {} for event {}",
+                    eventType, transactionEvent.eventId());
             return;
         }
 
+        log.info("Received transaction event id={} type={}",
+                transactionEvent.eventId(), eventType);
         notificationService.createFromTransactionEvent(transactionEvent);
     }
 }

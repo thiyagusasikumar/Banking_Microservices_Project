@@ -21,23 +21,22 @@ public class AccountEventListener {
 
     @KafkaListener(topics = "account-events")
     public void consume(String message) throws JsonProcessingException {
-        log.info("Received account event: {}", message);
-
         AccountEvent accountEvent = objectMapper.readValue(message, AccountEvent.class);
 
-        if(accountEvent ==null || accountEvent.eventType()==null){
-            log.info("Account event is null or eventType is null");
+        if (accountEvent == null || accountEvent.eventType() == null) {
+            log.warn("Ignoring account event without an event type");
             return;
         }
-        String eventType = accountEvent.eventType().toUpperCase(java.util.Locale.ROOT);
-        if(!switch (eventType) {
-            case "ACCOUNT_CREATED","ACCOUNT_BLOCKED" -> true;
+        String eventType = accountEvent.eventType().trim().toUpperCase(java.util.Locale.ROOT);
+        if (!switch (eventType) {
+            case "ACCOUNT_CREATED", "ACCOUNT_BLOCKED" -> true;
             default -> false;
-        }){
-            log.info("Ignoring unsupported event type: {}", eventType);
+        }) {
+            log.debug("Ignoring unsupported account event type {} for event {}",
+                    eventType, accountEvent.eventId());
             return;
         }
+        log.info("Received account event id={} type={}", accountEvent.eventId(), eventType);
         notificationService.createAccountEvent(accountEvent);
-
     }
 }

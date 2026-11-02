@@ -3,6 +3,7 @@ package com.banking.notificationservice.service.Imp;
 
 import com.banking.notificationservice.constants.NotificationType;
 import com.banking.notificationservice.dto.AccountEvent;
+import com.banking.notificationservice.dto.AuthEvent;
 import com.banking.notificationservice.dto.NotificationResponse;
 import com.banking.notificationservice.dto.TransactionEvent;
 import com.banking.notificationservice.entity.Notification;
@@ -12,6 +13,7 @@ import com.banking.notificationservice.mapper.NotificationMapper;
 import com.banking.notificationservice.repository.NotificationRepository;
 import com.banking.notificationservice.service.NotificationService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -86,11 +88,6 @@ public class NotificationServiceImpl implements NotificationService {
         requireValidNotificationId(id);
         Long recipientId = requireCustomerId(jwt);
         Notification notification = notificationRepository.findByIdAndRecipientId(id, recipientId).orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
-        if (!notification.isRead()) {
-            notification.setRead(true);
-            notification.setReadAt(LocalDateTime.now());
-        }
-        notificationRepository.save(notification);
         return notificationMapper.toNotificationResponse(notification);
     }
 
@@ -111,23 +108,12 @@ public class NotificationServiceImpl implements NotificationService {
         }
 
         NotificationType type = setNotificationType(event.eventType());
-        if (!notificationRepository.existsByEventIdAndRecipientId(event.eventId(), event.customerId())) {
-            Notification savedNotification = notificationRepository.save(getNotification(event, type));
-            notificationSseService.sendToCustomer(
-                    savedNotification.getRecipientId(),
-                    notificationMapper.toNotificationResponse(savedNotification)
-            );
-        }
+        saveAndSendIfAbsent(getNotification(event, type));
 
         if (type == NotificationType.TRANSACTION_COMPLETED
                 && event.receiverId() != null
-                && !event.customerId().equals(event.receiverId())
-                && !notificationRepository.existsByEventIdAndRecipientId(event.eventId(), event.receiverId())) {
-            Notification savedReceiverNotification = notificationRepository.save(createReceiverMessage(event));
-            notificationSseService.sendToCustomer(
-                    savedReceiverNotification.getRecipientId(),
-                    notificationMapper.toNotificationResponse(savedReceiverNotification)
-            );
+                && !event.customerId().equals(event.receiverId())) {
+            saveAndSendIfAbsent(createReceiverMessage(event));
         }
     }
 
@@ -139,16 +125,24 @@ public class NotificationServiceImpl implements NotificationService {
                 || event.customerId() == null
                 || event.eventType() == null
                 || event.eventType().isBlank()) {
-            throw new ForbiddenOperationException("Invalid Transaction Event");
+            throw new ForbiddenOperationException("Invalid Account Event");
         }
         NotificationType type = setNotificationType(event.eventType());
-        if (!notificationRepository.existsByEventIdAndRecipientId(event.eventId(), event.customerId())) {
-            Notification savedNotification = notificationRepository.save(getNotification(event, type));
-            notificationSseService.sendToCustomer(
-                    savedNotification.getRecipientId(),
-                    notificationMapper.toNotificationResponse(savedNotification)
-            );
+        saveAndSendIfAbsent(getNotification(event, type));
+    }
+
+    @Override
+    public void createAuthEvent(AuthEvent event) {
+        if (event == null
+                || event.eventId() == null
+                || event.eventId().isBlank()
+                || event.customerId() == null
+                || event.eventType() == null
+                || event.eventType().isBlank()) {
+            throw new ForbiddenOperationException("Invalid Auth Event");
         }
+        NotificationType type = setNotificationType(event.eventType());
+        saveAndSendIfAbsent(getNotification(event, type));
     }
 
     private Notification getNotification(TransactionEvent event, NotificationType notificationType) {
@@ -163,6 +157,7 @@ public class NotificationServiceImpl implements NotificationService {
             default -> "Transaction Completed";
         });
         notification.setMessage(setNotificationMessage(event, notificationType));
+        notification.setTransactionId(event.transactionId());
         notification.setCurrency(event.currency());
         notification.setAmount(event.amount());
         return notification;
@@ -178,10 +173,28 @@ public class NotificationServiceImpl implements NotificationService {
             case ACCOUNT_BLOCKED -> "Account Blocked";
             default -> "Transaction Completed";
         });
+        notification.setAccountId(event.accountId());
+        notification.setAccountType(event.accountType());
+        notification.setOccurredAt(event.occurredAt());
         notification.setMessage(setNotificationMessage(event, notificationType));
         return notification;
     }
 
+    private Notification getNotification(AuthEvent event, NotificationType notificationType) {
+        Notification notification = new Notification();
+        notification.setRecipientId(event.customerId());
+        notification.setEventId(event.eventId());
+        notification.setNotificationType(notificationType);
+        notification.setOccurredAt(event.occurredAt());
+        notification.setTitle(switch (notificationType)
+        {
+            case REGISTRATION_COMPLETED -> "Registration Completed";
+            case SECURITY_ALERT ->  "Security Alert";
+            default -> "Auth service Completed";
+        });
+        notification.setMessage(setNotificationMessage(event,notificationType));
+        return notification;
+    }
     public Notification createReceiverMessage(TransactionEvent event) {
         Notification notification = new Notification();
         notification.setRecipientId(event.receiverId());
@@ -208,8 +221,33 @@ public class NotificationServiceImpl implements NotificationService {
             case "MONEY_RECEIVED" -> NotificationType.MONEY_RECEIVED;
             case "ACCOUNT_CREATED" -> NotificationType.ACCOUNT_CREATED;
             case "ACCOUNT_BLOCKED" -> NotificationType.ACCOUNT_BLOCKED;
+            case "REGISTRATION", "REGISTRATION_COMPLETED" -> NotificationType.REGISTRATION_COMPLETED;
+            case "SECURITY_ALERT" -> NotificationType.SECURITY_ALERT;
             default -> throw new IllegalArgumentException("Unsupported transaction event type: " + eventType);
         };
+    }
+
+    private void saveAndSendIfAbsent(Notification notification) {
+        if (notificationRepository.existsByEventIdAndRecipientId(
+                notification.getEventId(), notification.getRecipientId())) {
+            return;
+        }
+
+        Notification savedNotification;
+        try {
+            savedNotification = notificationRepository.saveAndFlush(notification);
+        } catch (DataIntegrityViolationException exception) {
+            if (notificationRepository.existsByEventIdAndRecipientId(
+                    notification.getEventId(), notification.getRecipientId())) {
+                return;
+            }
+            throw exception;
+        }
+
+        notificationSseService.sendToCustomer(
+                savedNotification.getRecipientId(),
+                notificationMapper.toNotificationResponse(savedNotification)
+        );
     }
 
     private String setNotificationMessage(TransactionEvent event, NotificationType notificationType) {
@@ -228,14 +266,22 @@ public class NotificationServiceImpl implements NotificationService {
     private String setNotificationMessage(AccountEvent event, NotificationType notificationType) {
         String maskedAccountNumber = maskAccountNumber(event.accountNumber());
         String message = "Your account ending in "
-                + maskedAccountNumber
-                + " was created successfully.";
+                + maskedAccountNumber;
         return switch (notificationType) {
             case ACCOUNT_CREATED -> message + " was created successfully.";
             case ACCOUNT_BLOCKED -> message + " was blocked successfully.";
             default -> " Account  event was completed successfully.";
         };
     }
+
+    private String setNotificationMessage(AuthEvent event, NotificationType notificationType) {
+        return switch (notificationType) {
+            case REGISTRATION_COMPLETED -> "Registration was completed successfully.";
+            case SECURITY_ALERT -> "An unauthorized login attempt was detected.";
+            default -> "Auth event completed successfully.";
+        };
+    }
+
 
     @Override
     public Long requireCustomerId(Jwt jwt) {

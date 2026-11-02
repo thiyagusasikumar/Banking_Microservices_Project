@@ -2,6 +2,7 @@ package com.banking.notificationservice.service;
 
 
 import com.banking.notificationservice.dto.AccountEvent;
+import com.banking.notificationservice.dto.AuthEvent;
 import com.banking.notificationservice.dto.NotificationResponse;
 import com.banking.notificationservice.dto.TransactionEvent;
 import org.springframework.data.domain.Page;
@@ -22,6 +23,8 @@ public interface NotificationService {
     void createFromTransactionEvent(TransactionEvent transactionEvent);
 
     void createAccountEvent(AccountEvent accountEvent);
+
+    void createAuthEvent(AuthEvent authEvent);
 
     Long requireCustomerId(Jwt jwt);
 }
