@@ -10,4 +10,5 @@ public class RegisterResponse {
     private String keycloakUserId;
     private String userName;
     private String email;
+    private String phoneNumber;
 }

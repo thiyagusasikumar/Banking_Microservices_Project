@@ -5,6 +5,8 @@ import com.banking.authservice.constants.Roles;
 import com.banking.authservice.dto.RegisterEmployeeRequest;
 import com.banking.authservice.dto.RegisterRequest;
 import com.banking.authservice.dto.UserUpdateRequest;
+import com.banking.authservice.dto.KeycloakTokenResponse;
+import com.banking.authservice.exception.AuthenticationFailedException;
 import com.banking.authservice.exception.KeyCloakCreationException;
 import com.banking.authservice.exception.DuplicateUserException;
 import jakarta.ws.rs.core.Response;
@@ -31,6 +33,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class KeycloakUserService {
@@ -54,20 +57,95 @@ public class KeycloakUserService {
         this.restClient = restClient;
     }
 
-    public String createUser(RegisterRequest request) {
-        return createUser(getUser(request), Roles.CUSTOMER.name());
+    public String createUser(RegisterRequest request,String attemptId) {
+        UserRepresentation user = getUser(request);
+
+        Map<String, List<String>> attributes =
+                user.getAttributes() == null
+                        ? new HashMap<>()
+                        : new HashMap<>(user.getAttributes());
+
+        attributes.put(
+                "registration_attempt_id",
+                List.of(attemptId)
+        );
+
+        user.setAttributes(attributes);
+        return createUser(user, Roles.CUSTOMER.name());
     }
 
-    public String createEmployee(RegisterEmployeeRequest request, EmployeeRoles newRole) {
-        return createUser(getUser(request), newRole.name());
+    public String createEmployee(RegisterEmployeeRequest request, EmployeeRoles newRole, String attemptId) {
+        UserRepresentation user = getUser(request);
+
+        Map<String, List<String>> attributes =
+                user.getAttributes() == null
+                        ? new HashMap<>()
+                        : new HashMap<>(user.getAttributes());
+
+        attributes.put(
+                "registration_attempt_id",
+                List.of(attemptId)
+        );
+
+        user.setAttributes(attributes);
+        return createUser(user, newRole.name());
+    }
+    public Optional<UserRepresentation> findUserByRegistrationAttempt(
+            String attemptId) {
+
+        List<UserRepresentation> users = keycloak
+                .realm(realm)
+                .users()
+                .searchByAttributes(
+                        "registration_attempt_id:" + attemptId
+                );
+
+        if (users.isEmpty()) {
+            return Optional.empty();
+        }
+
+        if (users.size() > 1) {
+            throw new IllegalStateException(
+                    "Multiple Keycloak users found for registration attempt"
+            );
+        }
+
+        return Optional.of(users.get(0));
+    }
+
+    public void verifyCredentials(String userName, String password) {
+        MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
+        form.add("grant_type", "password");
+        form.add("client_id", clientId);
+        form.add("client_secret", clientSecret);
+        form.add("username", userName);
+        form.add("password", password);
+
+        try {
+            KeycloakTokenResponse tokenResponse = restClient.post()
+                    .uri(serverUrl + "/realms/" + realm + "/protocol/openid-connect/token")
+                    .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                    .body(form)
+                    .retrieve()
+                    .body(KeycloakTokenResponse.class);
+
+            if (tokenResponse == null || tokenResponse.getAccessToken() == null) {
+                throw new AuthenticationFailedException("Invalid username or password");
+            }
+        } catch (HttpClientErrorException.BadRequest
+                 | HttpClientErrorException.Unauthorized ex) {
+            throw new AuthenticationFailedException("Invalid username or password");
+        }
     }
 
     private UserRepresentation getUser(RegisterRequest request) {
-        return buildUser(request.getUserName(), request.getEmail(), request.getFirstName(), request.getLastName(), request.getPassword());
+        return buildUser(request.getUserName(), request.getEmail(), request.getFirstName(),
+                request.getLastName(), request.getPassword(), request.getPhoneNumber());
     }
 
     private UserRepresentation getUser(RegisterEmployeeRequest request) {
-        return buildUser(request.getUserName(), request.getEmail(), request.getFirstName(), request.getLastName(), request.getPassword());
+        return buildUser(request.getUserName(), request.getEmail(), request.getFirstName(),
+                request.getLastName(), request.getPassword(), request.getPhoneNumber());
     }
 
     private UserRepresentation buildUser(
@@ -75,13 +153,17 @@ public class KeycloakUserService {
             String email,
             String firstName,
             String lastName,
-            String rawPassword) {
+            String rawPassword,
+            String phoneNumber) {
         UserRepresentation user = new UserRepresentation();
         user.setUsername(username);
         user.setEmail(email);
         user.setFirstName(firstName);
         user.setLastName(lastName);
         user.setEnabled(true);
+        if (phoneNumber != null) {
+            user.setAttributes(Map.of("phoneNumber", List.of(phoneNumber)));
+        }
 
         CredentialRepresentation password = new CredentialRepresentation();
         password.setType(CredentialRepresentation.PASSWORD);
@@ -235,6 +317,37 @@ public class KeycloakUserService {
             userResource.update(representation);
         } catch (WebApplicationException | ProcessingException ex) {
             throw new KeyCloakCreationException("Identity provider could not update user status", ex);
+        }
+    }
+    public List<String> getUserRealmRoles(String keycloakUserId) {
+
+        return keycloak.realm(realm)
+                .users()
+                .get(keycloakUserId)
+                .roles()
+                .realmLevel()
+                .listAll()
+                .stream()
+                .map(RoleRepresentation::getName)
+                .toList();
+    }
+
+    public void ensureRealmRole(String keycloakUserId, String roleName) {
+        RealmResource realmResource = keycloak.realm(realm);
+        UserResource userResource = realmResource.users().get(keycloakUserId);
+
+        boolean alreadyAssigned = userResource.roles()
+                .realmLevel()
+                .listAll()
+                .stream()
+                .anyMatch(role -> roleName.equals(role.getName()));
+        if (!alreadyAssigned) {
+            RoleRepresentation role = realmResource.roles()
+                    .get(roleName)
+                    .toRepresentation();
+            userResource.roles()
+                    .realmLevel()
+                    .add(List.of(role));
         }
     }
 }
