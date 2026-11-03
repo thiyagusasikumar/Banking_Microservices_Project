@@ -67,6 +67,7 @@ public class AuthService {
     private final UserMapper userMapper;
     private final RegistrationAttemptService registrationAttemptService;
     private final RegistrationReconciliationService registrationReconciliationService;
+    private final UserRegistrationPersistenceService userRegistrationPersistenceService;
 
 
     public RegisterResponse register(RegisterRequest request) {
@@ -230,7 +231,7 @@ public class AuthService {
         user.setLastName(lastName);
         user.setPhoneNumber(phoneNumber);
         user.setRole(role);
-        return userRepository.save(user);
+        return userRegistrationPersistenceService.saveUserAndOutboxEvent(user);
     }
     public void updateCustomerId(User user, RegistrationAttempt attempt) {
         Long customerId = user.getId();
