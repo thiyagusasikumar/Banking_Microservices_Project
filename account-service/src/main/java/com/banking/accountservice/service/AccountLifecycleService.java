@@ -7,8 +7,6 @@ import java.util.List;
 
 public interface AccountLifecycleService {
 
-    AccountResponse activateAccount(Long id, String reason);
-
     AccountResponse freezeAccount(Long id, String reason);
 
     AccountResponse unfreezeAccount(Long id, String reason);

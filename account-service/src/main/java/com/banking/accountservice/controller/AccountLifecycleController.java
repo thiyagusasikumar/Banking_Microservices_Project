@@ -18,12 +18,6 @@ public class AccountLifecycleController {
 
     private final AccountLifecycleService accountLifecycleService;
 
-    @PostMapping("/{accountId}/activate")
-    public ResponseEntity<AccountResponse> activateAccount(@PathVariable Long accountId, @Valid @RequestBody AccountLifecycleRequest request) {
-
-        return ResponseEntity.ok(accountLifecycleService.activateAccount(accountId, request.getReason()));
-    }
-
     @PostMapping("/{accountId}/freeze")
     public ResponseEntity<AccountResponse> freezeAccount(@PathVariable Long accountId, @Valid @RequestBody AccountLifecycleRequest request) {
 

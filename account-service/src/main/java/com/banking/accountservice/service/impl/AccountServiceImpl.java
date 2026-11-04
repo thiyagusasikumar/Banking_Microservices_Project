@@ -67,7 +67,7 @@ public class AccountServiceImpl implements AccountService {
         account.setAccountNumber("ACC" + accountRepository.generateAccountNumber());
 
         account.setBalance(BigDecimal.ZERO);
-        account.setAccountStatus(AccountStatus.PENDING_ACTIVATION);
+        account.setAccountStatus(AccountStatus.ACTIVE);
         LocalDateTime now = LocalDateTime.now();
         account.setCreatedAt(now);
         account.setUpdatedAt(now);
