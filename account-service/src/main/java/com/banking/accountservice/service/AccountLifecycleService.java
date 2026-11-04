@@ -7,13 +7,13 @@ import java.util.List;
 
 public interface AccountLifecycleService {
 
-    AccountResponse activateAccount(Long id, String reason, String changedBy);
+    AccountResponse activateAccount(Long id, String reason);
 
-    AccountResponse freezeAccount(Long id, String reason, String changedBy);
+    AccountResponse freezeAccount(Long id, String reason);
 
-    AccountResponse unfreezeAccount(Long id, String reason, String changedBy);
+    AccountResponse unfreezeAccount(Long id, String reason);
 
-    AccountResponse closeAccount(Long id, String reason, String changedBy);
+    AccountResponse closeAccount(Long id, String reason);
 
     List<AccountStatusHistoryResponse> getStatusHistory(Long id);
 }
