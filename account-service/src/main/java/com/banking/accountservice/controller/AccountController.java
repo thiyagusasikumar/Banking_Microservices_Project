@@ -3,6 +3,8 @@ package com.banking.accountservice.controller;
 
 import com.banking.accountservice.constant.AccountStatus;
 import com.banking.accountservice.constant.AccountType;
+import com.banking.accountservice.dto.AccountOperationRequest;
+import com.banking.accountservice.dto.AccountOperationResponse;
 import com.banking.accountservice.dto.AccountResponse;
 import com.banking.accountservice.dto.BalanceResponse;
 import com.banking.accountservice.dto.CreateAccountRequest;
@@ -82,6 +84,16 @@ public class AccountController {
     public ResponseEntity<BalanceResponse> getBalance(@PathVariable Long id) {
 
         return ResponseEntity.ok(accountService.getBalance(id));
+    }
+
+    @PostMapping("/operations")
+    public AccountOperationResponse postOperation(@Valid @RequestBody AccountOperationRequest request) {
+        return accountService.postOperation(request);
+    }
+
+    @GetMapping("/operations/{reference}")
+    public AccountOperationResponse getOperation(@PathVariable String reference) {
+        return accountService.getOperation(reference);
     }
 
     @DeleteMapping("/{accountId}")

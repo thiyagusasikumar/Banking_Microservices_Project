@@ -28,4 +28,8 @@ public interface AccountService {
     BalanceResponse getBalance(Long id);
 
     void deleteAccount(Long id);
+
+    AccountOperationResponse postOperation(AccountOperationRequest request);
+
+    AccountOperationResponse getOperation(String reference);
 }
