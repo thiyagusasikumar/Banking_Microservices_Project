@@ -1,6 +1,7 @@
 package com.banking.accountservice.dto;
 
 import com.banking.accountservice.constant.AccountType;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -9,8 +10,8 @@ import lombok.Setter;
 @Setter
 public class CreateAccountRequest {
 
-    @NotNull(message = "Customer ID is required")
-    @Positive(message = "Customer ID must be positive")
+    // Set by AccountController from the validated access token, never from request JSON.
+    @JsonProperty(access = JsonProperty.Access.READ_ONLY)
     private Long customerId;
 
     @NotNull(message = "Account type is required")

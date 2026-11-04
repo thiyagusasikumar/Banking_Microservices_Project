@@ -1,7 +1,7 @@
 {
   "info": {
     "name": "Banking Application - Account Service",
-    "description": "Thirteen requests matching AccountController and AccountLifecycleController. Run Create Account first to capture accountId and accountNumber. Lifecycle order: activate, freeze, unfreeze, close, status-history. Current me uses customerId query parameter. Search filters apply only when both status and type are supplied.",
+    "description": "Requests for AccountController and AccountLifecycleController. Set accessToken to the accessToken returned by auth-service login. Run Create Account first to capture accountId and accountNumber. The authenticated customer's ID is read from the token.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -21,11 +21,26 @@
       "type": "string"
     },
     {
+      "key": "accessToken",
+      "value": "",
+      "type": "string"
+    },
+    {
       "key": "accountNumber",
       "value": "ACC123",
       "type": "string"
     }
   ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
   "item": [
     {
       "name": "01 - Create Account",
@@ -48,10 +63,10 @@
             "accounts"
           ]
         },
-        "description": "Creates an INR savings account. Captures accountId and accountNumber for later requests.",
+        "description": "Creates an INR savings account for the authenticated customer. customerId is read from the bearer token. Captures accountId and accountNumber for later requests.",
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"customerId\": {{customerId}},\n  \"accountType\": \"SAVINGS\",\n  \"currency\": \"INR\"\n}",
+          "raw": "{\n  \"accountType\": \"SAVINGS\",\n  \"currency\": \"INR\"\n}",
           "options": {
             "raw": {
               "language": "json"
@@ -143,12 +158,34 @@
       ]
     },
     {
-      "name": "04 - Get My Accounts",
+      "name": "04 - Get Current Customer ID",
       "request": {
         "method": "GET",
         "header": [],
         "url": {
-          "raw": "{{baseUrl}}/api/v1/accounts/me?customerId={{customerId}}",
+          "raw": "{{baseUrl}}/api/v1/accounts/me/customer-id",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "accounts",
+            "me",
+            "customer-id"
+          ]
+        },
+        "description": "Returns customerId from the authenticated access token."
+      },
+      "response": []
+    },
+    {
+      "name": "05 - Get My Accounts",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/accounts/me",
           "host": [
             "{{baseUrl}}"
           ],
@@ -158,14 +195,9 @@
             "accounts",
             "me"
           ],
-          "query": [
-            {
-              "value": "{{customerId}}",
-              "key": "customerId"
-            }
-          ]
+          "query": []
         },
-        "description": "Current implementation requires customerId as a query parameter; it does not derive it from authentication."
+        "description": "Returns accounts belonging to the authenticated customer, using customer_id from the bearer token."
       },
       "response": [],
       "event": [
@@ -181,7 +213,7 @@
       ]
     },
     {
-      "name": "05 - Get Accounts by Customer ID",
+      "name": "06 - Get Accounts by Customer ID",
       "request": {
         "method": "GET",
         "header": [],
@@ -214,7 +246,7 @@
       ]
     },
     {
-      "name": "06 - Search Accounts",
+      "name": "07 - Search Accounts",
       "request": {
         "method": "GET",
         "header": [],
@@ -263,7 +295,7 @@
       ]
     },
     {
-      "name": "07 - Patch Account Type",
+      "name": "08 - Patch Account Type",
       "request": {
         "method": "PATCH",
         "header": [
@@ -309,7 +341,7 @@
       ]
     },
     {
-      "name": "08 - Get Account Balance",
+      "name": "09 - Get Account Balance",
       "request": {
         "method": "GET",
         "header": [],
@@ -342,7 +374,7 @@
       ]
     },
     {
-      "name": "09 - Activate Account",
+      "name": "10 - Activate Account",
       "request": {
         "method": "POST",
         "header": [
@@ -378,7 +410,7 @@
       "response": []
     },
     {
-      "name": "10 - Freeze Account",
+      "name": "11 - Freeze Account",
       "request": {
         "method": "POST",
         "header": [
@@ -414,7 +446,7 @@
       "response": []
     },
     {
-      "name": "11 - Unfreeze Account",
+      "name": "12 - Unfreeze Account",
       "request": {
         "method": "POST",
         "header": [
@@ -450,7 +482,7 @@
       "response": []
     },
     {
-      "name": "12 - Close Account",
+      "name": "13 - Close Account",
       "request": {
         "method": "POST",
         "header": [
@@ -486,7 +518,7 @@
       "response": []
     },
     {
-      "name": "13 - Get Status History",
+      "name": "14 - Get Status History",
       "request": {
         "method": "GET",
         "header": [],
