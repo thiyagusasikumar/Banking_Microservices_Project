@@ -29,17 +29,6 @@ public class AccountController {
 
     private final AccountService accountService;
 
-//    @PostMapping
-//    public ResponseEntity<AccountResponse> createAccount(
-//            @Valid @RequestBody CreateAccountRequest request,
-//            @AuthenticationPrincipal  Jwt jwt) {
-//        // Ignore any customerId from the client; bind ownership to the authenticated customer.
-//        request.setCustomerId(getCustomerId(jwt));
-//        AccountResponse response = accountService.createAccount(request);
-//        return ResponseEntity.created(ServletUriComponentsBuilder.fromCurrentRequest()
-//                .path("/{accountId}").buildAndExpand(response.getId()).toUri()).body(response);
-//    }
-
     @PostMapping
     public ResponseEntity<AccountResponse> createAccount(@Valid @RequestBody CreateAccountRequest request, @AuthenticationPrincipal Jwt jwt) {
 
