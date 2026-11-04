@@ -7,8 +7,6 @@ import com.banking.accountservice.service.AccountLifecycleService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -21,35 +19,27 @@ public class AccountLifecycleController {
     private final AccountLifecycleService accountLifecycleService;
 
     @PostMapping("/{accountId}/activate")
-    public ResponseEntity<AccountResponse> activateAccount(@PathVariable Long accountId,
-                                                           @AuthenticationPrincipal Jwt reviewer,
-                                                           @Valid @RequestBody AccountLifecycleRequest request) {
+    public ResponseEntity<AccountResponse> activateAccount(@PathVariable Long accountId, @Valid @RequestBody AccountLifecycleRequest request) {
 
-        return ResponseEntity.ok(accountLifecycleService.activateAccount(accountId, request.getReason(), reviewer.getSubject()));
+        return ResponseEntity.ok(accountLifecycleService.activateAccount(accountId, request.getReason()));
     }
 
     @PostMapping("/{accountId}/freeze")
-    public ResponseEntity<AccountResponse> freezeAccount(@PathVariable Long accountId,
-                                                         @AuthenticationPrincipal Jwt reviewer,
-                                                         @Valid @RequestBody AccountLifecycleRequest request) {
+    public ResponseEntity<AccountResponse> freezeAccount(@PathVariable Long accountId, @Valid @RequestBody AccountLifecycleRequest request) {
 
-        return ResponseEntity.ok(accountLifecycleService.freezeAccount(accountId, request.getReason(), reviewer.getSubject()));
+        return ResponseEntity.ok(accountLifecycleService.freezeAccount(accountId, request.getReason()));
     }
 
     @PostMapping("/{accountId}/unfreeze")
-    public ResponseEntity<AccountResponse> unfreezeAccount(@PathVariable Long accountId,
-                                                           @AuthenticationPrincipal Jwt reviewer,
-                                                           @Valid @RequestBody AccountLifecycleRequest request) {
+    public ResponseEntity<AccountResponse> unfreezeAccount(@PathVariable Long accountId, @Valid @RequestBody AccountLifecycleRequest request) {
 
-        return ResponseEntity.ok(accountLifecycleService.unfreezeAccount(accountId, request.getReason(), reviewer.getSubject()));
+        return ResponseEntity.ok(accountLifecycleService.unfreezeAccount(accountId, request.getReason()));
     }
 
     @PostMapping("/{accountId}/close")
-    public ResponseEntity<AccountResponse> closeAccount(@PathVariable Long accountId,
-                                                        @AuthenticationPrincipal Jwt reviewer,
-                                                        @Valid @RequestBody AccountLifecycleRequest request) {
+    public ResponseEntity<AccountResponse> closeAccount(@PathVariable Long accountId, @Valid @RequestBody AccountLifecycleRequest request) {
 
-        return ResponseEntity.ok(accountLifecycleService.closeAccount(accountId, request.getReason(), reviewer.getSubject()));
+        return ResponseEntity.ok(accountLifecycleService.closeAccount(accountId, request.getReason()));
     }
 
     @GetMapping("/{accountId}/status-history")
