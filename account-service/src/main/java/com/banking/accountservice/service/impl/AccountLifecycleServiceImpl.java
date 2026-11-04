@@ -29,26 +29,26 @@ public class AccountLifecycleServiceImpl implements AccountLifecycleService {
 
     @Override
     @Transactional
-    public AccountResponse activateAccount(Long id, String reason) {
-        return changeStatus(id, AccountStatus.PENDING_ACTIVATION, AccountStatus.ACTIVE, reason);
+    public AccountResponse activateAccount(Long id, String reason, String changedBy) {
+        return changeStatus(id, AccountStatus.PENDING_ACTIVATION, AccountStatus.ACTIVE, reason, changedBy);
     }
 
     @Override
     @Transactional
-    public AccountResponse freezeAccount(Long id, String reason) {
-        return changeStatus(id, AccountStatus.ACTIVE, AccountStatus.FROZEN, reason);
+    public AccountResponse freezeAccount(Long id, String reason, String changedBy) {
+        return changeStatus(id, AccountStatus.ACTIVE, AccountStatus.FROZEN, reason, changedBy);
     }
 
     @Override
     @Transactional
-    public AccountResponse unfreezeAccount(Long id, String reason) {
-        return changeStatus(id, AccountStatus.FROZEN, AccountStatus.ACTIVE, reason);
+    public AccountResponse unfreezeAccount(Long id, String reason, String changedBy) {
+        return changeStatus(id, AccountStatus.FROZEN, AccountStatus.ACTIVE, reason, changedBy);
     }
 
     @Override
     @Transactional
-    public AccountResponse closeAccount(Long id, String reason) {
-        return changeStatus(id, AccountStatus.ACTIVE, AccountStatus.CLOSED, reason);
+    public AccountResponse closeAccount(Long id, String reason, String changedBy) {
+        return changeStatus(id, AccountStatus.ACTIVE, AccountStatus.CLOSED, reason, changedBy);
     }
 
 
@@ -65,7 +65,8 @@ public class AccountLifecycleServiceImpl implements AccountLifecycleService {
                 .toList();
     }
 
-    private AccountResponse changeStatus(Long id, AccountStatus expected, AccountStatus target, String reason) {
+    private AccountResponse changeStatus(Long id, AccountStatus expected, AccountStatus target, String reason,
+                                         String changedBy) {
         validateId(id);
         if (reason == null || reason.isBlank() || reason.length() > 500) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
@@ -88,8 +89,7 @@ public class AccountLifecycleServiceImpl implements AccountLifecycleService {
         history.setPreviousStatus(account.getAccountStatus());
         history.setNewStatus(target);
         history.setReason(reason.strip());
-        // Replace with the authenticated actor when security is integrated.
-        history.setChangedBy("UNAUTHENTICATED");
+        history.setChangedBy(changedBy);
         history.setChangedAt(now);
 
         account.setAccountStatus(target);

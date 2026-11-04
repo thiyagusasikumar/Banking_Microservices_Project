@@ -9,6 +9,8 @@ import com.banking.accountservice.dto.UpdateAccountRequest;
 import com.banking.accountservice.entity.Account;
 import com.banking.accountservice.repository.AccountRepository;
 import com.banking.accountservice.repository.AccountStatusHistoryRepository;
+import com.banking.accountservice.repository.KycApplicationRepository;
+import com.banking.accountservice.constant.KycStatus;
 import com.banking.accountservice.service.AccountService;
 import com.banking.accountservice.mapper.AccountMapper;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +31,7 @@ public class AccountServiceImpl implements AccountService {
 
     private final AccountRepository accountRepository;
     private final AccountStatusHistoryRepository historyRepository;
+    private final KycApplicationRepository kycApplicationRepository;
 
     @Override
     @Transactional
@@ -36,6 +39,9 @@ public class AccountServiceImpl implements AccountService {
 
         if (request == null || request.getCustomerId() == null || request.getCustomerId() <= 0) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Customer ID must be positive");
+        }
+        if (!kycApplicationRepository.existsByCustomerIdAndStatus(request.getCustomerId(), KycStatus.APPROVED)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "KYC must be approved before opening an account");
         }
         if (request.getAccountType() == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account type is required");
