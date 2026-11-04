@@ -1,11 +1,11 @@
 package com.banking.authservice.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record AuthEvent (
         String eventId,
         String eventType,
         Long customerId,
-        LocalDateTime occurredAt
+        Instant occurredAt
 ){
 }

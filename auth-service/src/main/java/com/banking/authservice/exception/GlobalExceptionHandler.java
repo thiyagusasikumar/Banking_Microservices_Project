@@ -13,6 +13,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.client.RestClientException;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.Objects;
 
@@ -25,7 +26,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
                 ex.getMessage(),
-                LocalDateTime.now()
+                Instant.now()
         );
 
         return ResponseEntity
@@ -39,7 +40,7 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(
                         HttpStatus.UNAUTHORIZED.value(),
                         "Invalid username or password",
-                        LocalDateTime.now()
+                        Instant.now()
                 ));
     }
     @ExceptionHandler(AccountNotActiveException.class)
@@ -48,7 +49,7 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(
                         HttpStatus.FORBIDDEN.value(),
                         ex.getMessage(),
-                        LocalDateTime.now()
+                        Instant.now()
                 ));
     }
     @ExceptionHandler(UsernameNotFoundException.class)
@@ -57,7 +58,7 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(
                         HttpStatus.NOT_FOUND.value(),
                         "User not found",
-                        LocalDateTime.now()
+                        Instant.now()
                 ));
     }
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -71,7 +72,7 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(
                         HttpStatus.BAD_REQUEST.value(),
                         message,
-                        LocalDateTime.now()
+                        Instant.now()
                 ));
     }
     @ExceptionHandler(HttpMessageNotReadableException.class)
@@ -81,7 +82,7 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(
                         HttpStatus.BAD_REQUEST.value(),
                         "Request body is missing or malformed",
-                        LocalDateTime.now()
+                        Instant.now()
                 ));
     }
     @ExceptionHandler(IllegalArgumentException.class)
@@ -89,7 +90,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
                 ex.getMessage(),
-                LocalDateTime.now()
+                Instant.now()
         );
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
@@ -98,20 +99,20 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RestClientException.class)
     public ResponseEntity<ErrorResponse> handleRestClient(RestClientException ex) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                .body(new ErrorResponse(502, "Keycloak communication failed", LocalDateTime.now()));
+                .body(new ErrorResponse(502, "Keycloak communication failed", Instant.now()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse(409, "Data conflict", LocalDateTime.now()));
+                .body(new ErrorResponse(409, "Data conflict", Instant.now()));
     }
     @ExceptionHandler(KeyCloakCreationException.class)
     public ResponseEntity<ErrorResponse> handleKeyCloakCreationException(KeyCloakCreationException ex) {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_GATEWAY.value(),
                 "Identity provider could not complete the request",
-                LocalDateTime.now()
+                Instant.now()
         );
 
         return ResponseEntity
@@ -123,7 +124,7 @@ public class GlobalExceptionHandler {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
                 ex.getMessage(),
-                LocalDateTime.now()
+                Instant.now()
         );
 
         return ResponseEntity

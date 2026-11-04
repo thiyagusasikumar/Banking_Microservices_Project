@@ -10,6 +10,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -28,7 +29,7 @@ public class OutboxService {
                 eventId,
             "REGISTRATION_COMPLETED",
                 user.getId(),
-                LocalDateTime.now()
+                Instant.now()
         );
 
         try {
@@ -44,8 +45,8 @@ public class OutboxService {
             outbox.setPayLoad(payload);
             outbox.setStatus(OutboxStatus.PENDING);
             outbox.setRetryCount(0);
-            outbox.setCreatedAt(LocalDateTime.now());
-            outbox.setNextRetryAt(LocalDateTime.now());
+            outbox.setCreatedAt(Instant.now());
+            outbox.setNextRetryAt(Instant.now());
 
             outBoxEventRepository.save(outbox);
 

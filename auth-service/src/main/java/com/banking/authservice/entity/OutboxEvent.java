@@ -6,7 +6,7 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 
 @Entity
@@ -50,11 +50,11 @@ public class OutboxEvent {
     @Column(nullable = false)
     private int retryCount;
 
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
-    private LocalDateTime publishedAt;
+    private Instant publishedAt;
 
-    private LocalDateTime nextRetryAt;
+    private Instant nextRetryAt;
 
     @Column(columnDefinition = "Text")
     private String lastErrorMessage;
@@ -62,7 +62,7 @@ public class OutboxEvent {
 
     @PrePersist
     public void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = Instant.now();
 
         if (status == null) {
             status = OutboxStatus.PENDING;
