@@ -3,12 +3,12 @@ package com.banking.authservice.dto;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @AllArgsConstructor
 public class ErrorResponse {
     private int status;
     private String message;
-    private LocalDateTime timestamp;
+    private Instant timestamp;
 }
