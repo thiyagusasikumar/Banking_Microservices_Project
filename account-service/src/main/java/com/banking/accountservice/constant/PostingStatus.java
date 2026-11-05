@@ -1,5 +1,5 @@
 package com.banking.accountservice.constant;
 
-public enum PostingStatus {
+public enum  PostingStatus {
     APPLIED, REJECTED
 }

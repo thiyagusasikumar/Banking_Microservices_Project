@@ -8,7 +8,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
-import lombok.Getter;
+   import lombok.Getter;
 import lombok.Setter;
 
 import java.math.BigDecimal;
@@ -18,7 +18,6 @@ import java.math.BigDecimal;
 @Getter
 @Setter
 public class AccountPosting {
-
     @Id
     @Column(name = "transaction_reference", nullable = false)
     private String transactionReference;
@@ -41,4 +40,5 @@ public class AccountPosting {
     private PostingStatus status;
 
     private String failureReason;
+
 }

@@ -9,6 +9,7 @@ import jakarta.validation.constraints.Pattern;
 import java.math.BigDecimal;
 
 public record AccountOperationRequest(
+
         @NotBlank(message = "Transaction reference is required")
         String transactionReference,
 
@@ -16,6 +17,7 @@ public record AccountOperationRequest(
         OperationType type,
 
         Long sourceAccount,
+
         Long destinationAccount,
 
         @NotNull(message = "Amount is required")
@@ -23,7 +25,11 @@ public record AccountOperationRequest(
         BigDecimal amount,
 
         @NotNull(message = "Currency is required")
-        @Pattern(regexp = "[A-Za-z]{3}", message = "Currency must be a valid three-letter code")
+        @Pattern(
+                regexp = "[A-Za-z]{3}",
+                message = "Currency must be a valid three-letter code"
+        )
         String currency
+
 ) {
 }

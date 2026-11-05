@@ -29,12 +29,6 @@ public class AccountLifecycleServiceImpl implements AccountLifecycleService {
 
     @Override
     @Transactional
-    public AccountResponse activateAccount(Long id, String reason) {
-        return changeStatus(id, AccountStatus.PENDING_ACTIVATION, AccountStatus.ACTIVE, reason);
-    }
-
-    @Override
-    @Transactional
     public AccountResponse freezeAccount(Long id, String reason) {
         return changeStatus(id, AccountStatus.ACTIVE, AccountStatus.FROZEN, reason);
     }
