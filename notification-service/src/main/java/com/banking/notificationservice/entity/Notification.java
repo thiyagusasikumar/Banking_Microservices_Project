@@ -1,6 +1,7 @@
 package com.banking.notificationservice.entity;
 
 
+
 import com.banking.notificationservice.constants.NotificationType;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -9,7 +10,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Entity
 @Getter
@@ -45,7 +46,11 @@ public class Notification {
 
     private Long accountId;
 
-    private LocalDateTime occurredAt;
+    private String recipientName;
+
+    private String recipientEmail;
+
+    private Instant occurredAt;
 
     @Column(nullable = false, columnDefinition = "TEXT")
     private String message;
@@ -60,12 +65,12 @@ public class Notification {
     private String currency;
 
     @Column(nullable = false)
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 
-    private LocalDateTime readAt;
+    private Instant readAt;
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        createdAt = Instant.now();
     }
 }

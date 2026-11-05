@@ -5,11 +5,11 @@ package com.banking.notificationservice.kafkaListener;
 import com.banking.notificationservice.dto.AccountEvent;
 import com.banking.notificationservice.service.NotificationService;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;
 import org.springframework.stereotype.Component;
+import tools.jackson.databind.ObjectMapper;
 
 @RequiredArgsConstructor
 @Slf4j

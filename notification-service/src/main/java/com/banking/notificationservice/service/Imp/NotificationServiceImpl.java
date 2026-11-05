@@ -2,10 +2,7 @@ package com.banking.notificationservice.service.Imp;
 
 
 import com.banking.notificationservice.constants.NotificationType;
-import com.banking.notificationservice.dto.AccountEvent;
-import com.banking.notificationservice.dto.AuthEvent;
-import com.banking.notificationservice.dto.NotificationResponse;
-import com.banking.notificationservice.dto.TransactionEvent;
+import com.banking.notificationservice.dto.*;
 import com.banking.notificationservice.entity.Notification;
 import com.banking.notificationservice.exception.ForbiddenOperationException;
 import com.banking.notificationservice.exception.ResourceNotFoundException;
@@ -22,7 +19,7 @@ import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Locale;
 import java.util.Set;
 
@@ -36,6 +33,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationMapper notificationMapper;
     private final NotificationSseService notificationSseService;
+    private final EmailNotificationService emailNotificationService;
 
 
     @Override
@@ -70,7 +68,7 @@ public class NotificationServiceImpl implements NotificationService {
         Notification notification = notificationRepository.findByIdAndRecipientId(id, recipientId).orElseThrow(() -> new ResourceNotFoundException("Notification not found"));
         if (!notification.isRead()) {
             notification.setRead(true);
-            notification.setReadAt(LocalDateTime.now());
+            notification.setReadAt(Instant.now());
         }
 
         notificationRepository.save(notification);
@@ -80,7 +78,7 @@ public class NotificationServiceImpl implements NotificationService {
     @Transactional
     public int markAllAsRead(Jwt jwt) {
         Long recipientId = requireCustomerId(jwt);
-        return notificationRepository.markAllAsRead(recipientId, LocalDateTime.now());
+        return notificationRepository.markAllAsRead(recipientId, Instant.now());
     }
 
     @Override
@@ -142,7 +140,18 @@ public class NotificationServiceImpl implements NotificationService {
             throw new ForbiddenOperationException("Invalid Auth Event");
         }
         NotificationType type = setNotificationType(event.eventType());
-        saveAndSendIfAbsent(getNotification(event, type));
+        if (saveAndSendIfAbsent(getNotification(event, type))) {
+            sendEmailToCustomer(event, type);
+        }
+    }
+
+    private void sendEmailToCustomer(AuthEvent event, NotificationType type) {
+       switch (type) {
+           case REGISTRATION_COMPLETED -> emailNotificationService.sendRegistrationEmail(event.email(),event.customerName());
+           default -> {
+               return;
+           }
+       }
     }
 
     private Notification getNotification(TransactionEvent event, NotificationType notificationType) {
@@ -227,10 +236,10 @@ public class NotificationServiceImpl implements NotificationService {
         };
     }
 
-    private void saveAndSendIfAbsent(Notification notification) {
+    private boolean saveAndSendIfAbsent(Notification notification) {
         if (notificationRepository.existsByEventIdAndRecipientId(
                 notification.getEventId(), notification.getRecipientId())) {
-            return;
+            return false;
         }
 
         Notification savedNotification;
@@ -239,7 +248,7 @@ public class NotificationServiceImpl implements NotificationService {
         } catch (DataIntegrityViolationException exception) {
             if (notificationRepository.existsByEventIdAndRecipientId(
                     notification.getEventId(), notification.getRecipientId())) {
-                return;
+                return false;
             }
             throw exception;
         }
@@ -248,6 +257,7 @@ public class NotificationServiceImpl implements NotificationService {
                 savedNotification.getRecipientId(),
                 notificationMapper.toNotificationResponse(savedNotification)
         );
+        return true;
     }
 
     private String setNotificationMessage(TransactionEvent event, NotificationType notificationType) {
