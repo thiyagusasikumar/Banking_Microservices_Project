@@ -17,10 +17,10 @@ import com.banking.accountservice.repository.AccountStatusHistoryRepository;
 
 import com.banking.accountservice.service.AccountService;
 import com.banking.accountservice.mapper.AccountMapper;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -33,7 +33,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
 @Service
-@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AccountServiceImpl implements AccountService {
 
@@ -41,6 +40,17 @@ public class AccountServiceImpl implements AccountService {
     private final AccountStatusHistoryRepository historyRepository;
     private final AccountPostingRepository postingRepository;
     private final TransactionTemplate transactionTemplate;
+
+    public AccountServiceImpl(
+            AccountRepository accountRepository,
+            AccountStatusHistoryRepository historyRepository,
+            AccountPostingRepository postingRepository,
+            @Qualifier("accountPostingTransactionTemplate") TransactionTemplate transactionTemplate) {
+        this.accountRepository = accountRepository;
+        this.historyRepository = historyRepository;
+        this.postingRepository = postingRepository;
+        this.transactionTemplate = transactionTemplate;
+    }
 
     @Override
     @Transactional

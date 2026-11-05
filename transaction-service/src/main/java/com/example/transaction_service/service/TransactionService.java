@@ -80,7 +80,7 @@ public class TransactionService {
         AccountOperationRequest operation = new AccountOperationRequest(pending.getReference(), type,
                 parseAccount(finalSource), parseAccount(finalDestination), finalAmount, finalCurrency);
         try {
-            return applyResponse(pending.getReference(), accountServiceClient.post(operation));
+             return applyResponse(pending.getReference(), accountServiceClient.post(operation));
         } catch (RestClientException ex) {
             // The POST may have committed even when its response was lost. Query only; never re-post here.
             return reconcile(pending.getReference());

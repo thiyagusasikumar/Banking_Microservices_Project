@@ -37,7 +37,7 @@ public class TransactionController {
     }
 
     @PostMapping("/withdrawal")
-    public ResponseEntity<TransactionResponse> withdrawal(@RequestHeader("Idempotency-Key") String key,
+     public ResponseEntity<TransactionResponse> withdrawal(@RequestHeader("Idempotency-Key") String key,
                                                           @Valid @RequestBody WithdrawalRequest request) {
         return created(service.create(Type.WITHDRAWAL, request.accountId(), null, request.amount(), request.currency(), key));
     }
