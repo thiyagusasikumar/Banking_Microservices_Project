@@ -5,13 +5,12 @@ import com.banking.authservice.dto.AuthEvent;
 import com.banking.authservice.entity.OutboxEvent;
 import com.banking.authservice.entity.User;
 import com.banking.authservice.repository.OutboxEventRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -33,10 +32,9 @@ public class OutboxService {
         );
 
         try {
-            String payload =
-                    objectMapper.writeValueAsString(event);
+            String payload = objectMapper.writeValueAsString(event);
 
-           OutboxEvent outbox = new OutboxEvent();
+            OutboxEvent outbox = new OutboxEvent();
 
             outbox.setEventId(eventId);
             outbox.setAggregationType("USER");
@@ -50,11 +48,10 @@ public class OutboxService {
 
             outBoxEventRepository.save(outbox);
 
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             throw new RuntimeException(
                     "Failed to serialize user event", e
             );
         }
     }
 }
-
