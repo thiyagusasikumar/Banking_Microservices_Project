@@ -11,6 +11,9 @@ import com.banking.accountservice.repository.AccountStatusHistoryRepository;
 import com.banking.accountservice.service.AccountLifecycleService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -82,8 +85,7 @@ public class AccountLifecycleServiceImpl implements AccountLifecycleService {
         history.setPreviousStatus(account.getAccountStatus());
         history.setNewStatus(target);
         history.setReason(reason.strip());
-        // Replace with the authenticated actor when security is integrated.
-        history.setChangedBy("UNAUTHENTICATED");
+        history.setChangedBy(resolveCurrentUser());
         history.setChangedAt(now);
 
         account.setAccountStatus(target);
@@ -91,6 +93,15 @@ public class AccountLifecycleServiceImpl implements AccountLifecycleService {
         Account savedAccount = accountRepository.save(account);
         historyRepository.save(history);
         return AccountMapper.toResponse(savedAccount);
+    }
+
+    private String resolveCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth != null && auth.getPrincipal() instanceof Jwt jwt) {
+            String preferred = jwt.getClaimAsString("preferred_username");
+            return preferred != null ? preferred : jwt.getSubject();
+        }
+        return "SYSTEM";
     }
 
     private void validateId(Long id) {

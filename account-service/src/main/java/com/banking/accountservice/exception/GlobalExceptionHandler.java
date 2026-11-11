@@ -6,119 +6,93 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.web.HttpMediaTypeNotAcceptableException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.HttpRequestMethodNotSupportedException;
-import org.springframework.web.HttpMediaTypeNotSupportedException;
-import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
-import org.springframework.web.servlet.resource.NoResourceFoundException;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 import java.sql.SQLException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-    // Handle 400, 404, 409 from ServiceImpl
     @ExceptionHandler(ResponseStatusException.class)
-    public ResponseEntity<String> handleStatus(
-            ResponseStatusException ex) {
-
-        return ResponseEntity.status(ex.getStatusCode())
-                .body(ex.getReason());
+    public ResponseEntity<ErrorResponse> handleStatus(ResponseStatusException ex) {
+        int status = ex.getStatusCode().value();
+        return ResponseEntity.status(status)
+                .body(ErrorResponse.of(status, HttpStatus.resolve(status).getReasonPhrase(), ex.getReason()));
     }
 
-    // Handle @Valid validation errors
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<String> handleValidation(
-            MethodArgumentNotValidException ex) {
-
-        String message = ex.getBindingResult()
-                .getFieldErrors()
-                .stream()
+    public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException ex) {
+        String message = ex.getBindingResult().getFieldErrors().stream()
                 .findFirst()
-                .map(error -> error.getDefaultMessage())
+                .map(e -> e.getDefaultMessage())
                 .orElse("Invalid request");
-
-        return ResponseEntity.badRequest().body(message);
+        return ResponseEntity.badRequest()
+                .body(ErrorResponse.of(400, "Bad Request", message));
     }
 
-    // Handle invalid request data
     @ExceptionHandler({
             HttpMessageNotReadableException.class,
             MethodArgumentTypeMismatchException.class,
             MissingServletRequestParameterException.class,
             ConstraintViolationException.class
     })
-    public ResponseEntity<String> handleBadRequest(Exception ex) {
-
+    public ResponseEntity<ErrorResponse> handleBadRequest(Exception ex) {
         return ResponseEntity.badRequest()
-                .body("Invalid request data");
+                .body(ErrorResponse.of(400, "Bad Request", "Invalid request data"));
     }
 
-    // Handle duplicate database values
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ResponseEntity<String> handleDatabase(
-            DataIntegrityViolationException ex) {
-
-        Throwable cause = ex.getMostSpecificCause();
-
-        if (cause instanceof SQLException sql &&
-                "23505".equals(sql.getSQLState())) {
-
+    public ResponseEntity<ErrorResponse> handleDatabase(DataIntegrityViolationException ex) {
+        if (ex.getMostSpecificCause() instanceof SQLException sql && "23505".equals(sql.getSQLState())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body("Duplicate account data");
+                    .body(ErrorResponse.of(409, "Conflict", "Duplicate account data"));
         }
-
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Database operation failed");
+                .body(ErrorResponse.of(500, "Internal Server Error", "Database operation failed"));
     }
 
-    // Handle concurrent updates
     @ExceptionHandler(OptimisticLockingFailureException.class)
-    public ResponseEntity<String> handleConcurrency(
-            OptimisticLockingFailureException ex) {
-
+    public ResponseEntity<ErrorResponse> handleConcurrency(OptimisticLockingFailureException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body("Account was modified by another request");
+                .body(ErrorResponse.of(409, "Conflict", "Account was modified by another request"));
     }
 
-    // Handle wrong HTTP methods
     @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
-    public ResponseEntity<String> handleMethod(
-            HttpRequestMethodNotSupportedException ex) {
-
+    public ResponseEntity<ErrorResponse> handleMethod(HttpRequestMethodNotSupportedException ex) {
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED)
-                .body("HTTP method not allowed");
+                .body(ErrorResponse.of(405, "Method Not Allowed", "HTTP method not allowed"));
     }
 
-    // Handle invalid API paths
     @ExceptionHandler(NoResourceFoundException.class)
-    public ResponseEntity<String> handleNotFound(
-            NoResourceFoundException ex) {
-
+    public ResponseEntity<ErrorResponse> handleNotFound(NoResourceFoundException ex) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body("API not found");
+                .body(ErrorResponse.of(404, "Not Found", "API not found"));
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
-    public ResponseEntity<String> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex) {
-        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE).body("Unsupported content type");
+    public ResponseEntity<ErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex) {
+        return ResponseEntity.status(HttpStatus.UNSUPPORTED_MEDIA_TYPE)
+                .body(ErrorResponse.of(415, "Unsupported Media Type", "Unsupported content type"));
     }
 
     @ExceptionHandler(HttpMediaTypeNotAcceptableException.class)
-    public ResponseEntity<Void> handleNotAcceptable(HttpMediaTypeNotAcceptableException ex) {
-        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE).build();
+    public ResponseEntity<ErrorResponse> handleNotAcceptable(HttpMediaTypeNotAcceptableException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_ACCEPTABLE)
+                .body(ErrorResponse.of(406, "Not Acceptable", "Not acceptable"));
     }
 
-    // Handle unexpected errors
     @ExceptionHandler(Exception.class)
-    public ResponseEntity<String> handleGeneral(Exception ex) {
-
+    public ResponseEntity<ErrorResponse> handleGeneral(Exception ex) {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                .body("Something went wrong");
+                .body(ErrorResponse.of(500, "Internal Server Error", "Something went wrong"));
     }
 }
