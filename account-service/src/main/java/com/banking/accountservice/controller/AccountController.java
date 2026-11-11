@@ -42,15 +42,15 @@ public class AccountController {
     }
 
     @GetMapping("/{accountId}")
-    public ResponseEntity<AccountResponse> getAccountById(@PathVariable Long accountId) {
-
-        return ResponseEntity.ok(accountService.getAccountById(accountId));
+    public ResponseEntity<AccountResponse> getAccountById(
+            @PathVariable Long accountId, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(accountService.getAccountById(accountId, getCustomerId(jwt)));
     }
 
     @GetMapping("/by-number/{accountNumber}")
-    public ResponseEntity<AccountResponse> getByAccountNumber(@PathVariable String accountNumber) {
-
-        return ResponseEntity.ok(accountService.getByAccountNumber(accountNumber));
+    public ResponseEntity<AccountResponse> getByAccountNumber(
+            @PathVariable String accountNumber, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(accountService.getByAccountNumber(accountNumber, getCustomerId(jwt)));
     }
 
     @GetMapping("/me")
@@ -89,9 +89,9 @@ public class AccountController {
 
 
     @GetMapping("/{id}/balance")
-    public ResponseEntity<BalanceResponse> getBalance(@PathVariable Long id) {
-
-        return ResponseEntity.ok(accountService.getBalance(id));
+    public ResponseEntity<BalanceResponse> getBalance(
+            @PathVariable Long id, @AuthenticationPrincipal Jwt jwt) {
+        return ResponseEntity.ok(accountService.getBalance(id, getCustomerId(jwt)));
     }
 
     @PostMapping("/operations")

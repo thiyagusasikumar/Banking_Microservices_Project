@@ -13,9 +13,9 @@ public interface AccountService {
 
     AccountResponse createAccount(CreateAccountRequest request);
 
-    AccountResponse getAccountById(Long id);
+    AccountResponse getAccountById(Long id, Long customerId);
 
-    AccountResponse getByAccountNumber(String accountNumber);
+    AccountResponse getByAccountNumber(String accountNumber, Long customerId);
 
     List<AccountResponse> getMyAccounts(Long customerId);
 
@@ -25,7 +25,7 @@ public interface AccountService {
 
     AccountResponse updateAccount(Long id, UpdateAccountRequest request);
 
-    BalanceResponse getBalance(Long id);
+    BalanceResponse getBalance(Long id, Long customerId);
 
     void deleteAccount(Long id);
 

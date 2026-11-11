@@ -88,29 +88,27 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public AccountResponse getAccountById(Long id) {
+    public AccountResponse getAccountById(Long id, Long customerId) {
 
         if (id == null || id <= 0) {
-
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account ID must be positive");
         }
-
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with id: " + id));
+        requireValidCustomerId(customerId);
+        Account account = accountRepository.findByIdAndCustomerId(id, customerId)
+                .orElseThrow(() -> new ResponseStatusException(
+                        HttpStatus.NOT_FOUND, "Account not found with id: " + id));
 
         return AccountMapper.toResponse(account);
     }
 
     @Override
-    public AccountResponse getByAccountNumber(String accountNumber) {
-
+    public AccountResponse getByAccountNumber(String accountNumber, Long customerId) {
         if (accountNumber == null || accountNumber.isBlank()) {
-
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account number is required");
         }
-
-        Account account = accountRepository.findByAccountNumber(accountNumber)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with number: " + accountNumber));
+        requireValidCustomerId(customerId);
+        Account account = accountRepository.findByAccountNumberAndCustomerId(accountNumber, customerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
 
         return AccountMapper.toResponse(account);
     }
@@ -206,15 +204,13 @@ public class AccountServiceImpl implements AccountService {
     }
 
     @Override
-    public BalanceResponse getBalance(Long id) {
-
+    public BalanceResponse getBalance(Long id, Long customerId) {
         if (id == null || id <= 0) {
-
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Account ID must be positive");
         }
-
-        Account account = accountRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found with id: " + id));
+        requireValidCustomerId(customerId);
+        Account account = accountRepository.findByIdAndCustomerId(id, customerId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Account not found"));
 
         return new BalanceResponse(
                 account.getId(),
@@ -357,5 +353,12 @@ public class AccountServiceImpl implements AccountService {
     private AccountOperationResponse response(AccountPosting posting) {
         return new AccountOperationResponse(posting.getTransactionReference(), posting.getStatus(),
                 posting.getFailureReason());
+    }
+
+    private void requireValidCustomerId(Long customerId) {
+        if (customerId == null || customerId <= 0) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
+                    "Access token is missing a valid customer_id claim");
+        }
     }
 }

@@ -22,7 +22,11 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
 
     Optional<Account> findByAccountNumber(String accountNumber);
 
+    Optional<Account> findByAccountNumberAndCustomerId(String accountNumber, Long customerId);
+
     List<Account> findByCustomerId(Long customerId);
+
+    Optional<Account> findByIdAndCustomerId(Long id, Long customerId);
 
     Page<Account> findByAccountStatusAndAccountType(AccountStatus status, AccountType type, Pageable pageable);
 
@@ -38,4 +42,3 @@ public interface AccountRepository extends JpaRepository<Account, Long> {
     @Query("select a from Account a where a.id = :id")
     Optional<Account> findByIdForUpdate(@Param("id") Long id);
 }
-
