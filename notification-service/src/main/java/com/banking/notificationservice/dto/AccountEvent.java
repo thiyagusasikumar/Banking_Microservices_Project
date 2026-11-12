@@ -1,6 +1,6 @@
 package com.banking.notificationservice.dto;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 public record AccountEvent(
         String eventId,
@@ -9,7 +9,7 @@ public record AccountEvent(
         Long accountId,
         String accountNumber,
         String accountType,
-        LocalDateTime occurredAt
+        Instant occurredAt
 ) {
 }
 

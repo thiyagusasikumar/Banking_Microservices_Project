@@ -2,6 +2,7 @@ package com.banking.notificationservice.dto;
 
 import lombok.*;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Getter
@@ -19,7 +20,9 @@ public class NotificationResponse {
 
     private String message;
 
-    private LocalDateTime createdAt;
+    private Instant createdAt;
+
+    private String recipientEmail;
 
     private boolean read;
 }

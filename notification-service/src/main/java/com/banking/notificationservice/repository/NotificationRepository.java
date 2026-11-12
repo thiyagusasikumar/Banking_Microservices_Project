@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Optional;
 
 @Repository
@@ -40,7 +40,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             """)
     int markAllAsRead(
             @Param("customerId") Long customerId,
-            @Param("readAt") LocalDateTime readAt
+            @Param("readAt") Instant readAt
     );
 
 

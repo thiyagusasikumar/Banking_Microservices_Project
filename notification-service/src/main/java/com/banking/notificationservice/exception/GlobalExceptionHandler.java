@@ -10,7 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -47,7 +47,7 @@ public class GlobalExceptionHandler {
     private ResponseEntity<ApiErrorResponse> errorResponse(
             HttpStatus status, String message, HttpServletRequest request) {
         ApiErrorResponse body = new ApiErrorResponse(
-                LocalDateTime.now(),
+                Instant.now(),
                 status.value(),
                 status.getReasonPhrase(),
                 message,
