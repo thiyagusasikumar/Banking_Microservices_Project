@@ -31,4 +31,19 @@ public class EmailNotificationService {
         );
         mailSender.send(mailMessage);
     }
+
+    public void sendSecurityAlertEmail(String recipientEmail, String customerName) {
+        SimpleMailMessage mailMessage = new SimpleMailMessage();
+
+        mailMessage.setFrom(sender);
+        mailMessage.setTo(recipientEmail);
+        mailMessage.setSubject("Security Alert");
+        mailMessage.setText(
+                "Hello " + customerName + ",\n\n"
+                        + "We detected an unauthorized login attempt on your banking account. "
+                        + "If this was not you, please contact support.\n\n"
+                        + "Thank you."
+        );
+        mailSender.send(mailMessage);
+    }
 }

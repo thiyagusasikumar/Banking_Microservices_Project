@@ -1,4 +1,4 @@
-package com.banking.notificationservice.security;
+package com.banking.notificationservice.config;
 
 
 import org.springframework.context.annotation.Bean;
@@ -16,12 +16,21 @@ import org.springframework.security.web.SecurityFilterChain;
 public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.csrf(AbstractHttpConfigurer::disable)
-                .sessionManagement(session->session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth->auth.anyRequest().authenticated())
-                .oauth2ResourceServer(oauth2->oauth2.jwt(Customizer.withDefaults()));
-
-                return  http.build();
+        return http
+                .csrf(AbstractHttpConfigurer::disable)
+                .sessionManagement(session ->
+                        session.sessionCreationPolicy(
+                                SessionCreationPolicy.STATELESS
+                        )
+                )
+                .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/notification/**").authenticated()
+                        .anyRequest().denyAll()
+                )
+                .oauth2ResourceServer(oauth2 ->
+                        oauth2.jwt(Customizer.withDefaults())
+                )
+                .build();
     }
 
 }

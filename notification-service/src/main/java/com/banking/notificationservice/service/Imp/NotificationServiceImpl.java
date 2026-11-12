@@ -1,12 +1,16 @@
 package com.banking.notificationservice.service.Imp;
 
 
+import com.banking.notificationservice.constants.EmailStatus;
+import com.banking.notificationservice.constants.EmailType;
 import com.banking.notificationservice.constants.NotificationType;
 import com.banking.notificationservice.dto.*;
+import com.banking.notificationservice.entity.EmailOutbox;
 import com.banking.notificationservice.entity.Notification;
 import com.banking.notificationservice.exception.ForbiddenOperationException;
 import com.banking.notificationservice.exception.ResourceNotFoundException;
 import com.banking.notificationservice.mapper.NotificationMapper;
+import com.banking.notificationservice.repository.EmailOutboxRepository;
 import com.banking.notificationservice.repository.NotificationRepository;
 import com.banking.notificationservice.service.NotificationService;
 import lombok.RequiredArgsConstructor;
@@ -33,7 +37,7 @@ public class NotificationServiceImpl implements NotificationService {
     private final NotificationRepository notificationRepository;
     private final NotificationMapper notificationMapper;
     private final NotificationSseService notificationSseService;
-    private final EmailNotificationService emailNotificationService;
+    private final EmailOutboxRepository emailOutboxRepository;
 
 
     @Override
@@ -136,22 +140,33 @@ public class NotificationServiceImpl implements NotificationService {
                 || event.eventId().isBlank()
                 || event.customerId() == null
                 || event.eventType() == null
-                || event.eventType().isBlank()) {
+                || event.eventType().isBlank()
+                || event.email() == null
+                || event.email().isBlank()
+                || event.customerName() == null
+                || event.customerName().isBlank()) {
             throw new ForbiddenOperationException("Invalid Auth Event");
         }
-        NotificationType type = setNotificationType(event.eventType());
-        if (saveAndSendIfAbsent(getNotification(event, type))) {
-            sendEmailToCustomer(event, type);
-        }
-    }
+        String eventType = event.eventType().trim().toUpperCase(Locale.ROOT);
+        NotificationType type = setNotificationType(eventType);
+        EmailType emailType = switch (eventType) {
+            case "REGISTRATION", "REGISTRATION_COMPLETED" -> EmailType.REGISTRATION_COMPLETED;
+            case "SECURITY_ALERT" -> EmailType.SECURITY_ALERT;
+            default -> throw new IllegalArgumentException("Unsupported auth event type: " + eventType);
+        };
 
-    private void sendEmailToCustomer(AuthEvent event, NotificationType type) {
-       switch (type) {
-           case REGISTRATION_COMPLETED -> emailNotificationService.sendRegistrationEmail(event.email(),event.customerName());
-           default -> {
-               return;
-           }
-       }
+        saveAndSendIfAbsent(getNotification(event, type));
+        if (!emailOutboxRepository.existsByEventIdAndEmailType(event.eventId(), emailType)) {
+            EmailOutbox emailOutbox = new EmailOutbox();
+            emailOutbox.setEventId(event.eventId());
+            emailOutbox.setEmailType(emailType);
+            emailOutbox.setRecipientEmail(event.email());
+            emailOutbox.setEmailStatus(EmailStatus.PENDING);
+            emailOutbox.setRetryCount(0);
+            emailOutbox.setNextRetryAt(Instant.now());
+            emailOutbox.setName(event.customerName());
+            emailOutboxRepository.save(emailOutbox);
+        }
     }
 
     private Notification getNotification(TransactionEvent event, NotificationType notificationType) {
@@ -194,6 +209,8 @@ public class NotificationServiceImpl implements NotificationService {
         notification.setRecipientId(event.customerId());
         notification.setEventId(event.eventId());
         notification.setNotificationType(notificationType);
+        notification.setRecipientName(event.customerName());
+        notification.setRecipientEmail(event.email());
         notification.setOccurredAt(event.occurredAt());
         notification.setTitle(switch (notificationType)
         {
