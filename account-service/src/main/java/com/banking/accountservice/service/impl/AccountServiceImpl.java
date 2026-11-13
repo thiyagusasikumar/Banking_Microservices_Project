@@ -1,20 +1,15 @@
 package com.banking.accountservice.service.impl;
 
-import com.banking.accountservice.constant.AccountStatus;
-import com.banking.accountservice.constant.AccountType;
-import com.banking.accountservice.constant.PostingStatus;
-import com.banking.accountservice.dto.AccountOperationRequest;
-import com.banking.accountservice.dto.AccountOperationResponse;
-import com.banking.accountservice.dto.AccountResponse;
-import com.banking.accountservice.dto.BalanceResponse;
-import com.banking.accountservice.dto.CreateAccountRequest;
-import com.banking.accountservice.dto.UpdateAccountRequest;
+import com.banking.accountservice.constant.*;
+import com.banking.accountservice.dto.*;
 import com.banking.accountservice.entity.Account;
+import com.banking.accountservice.entity.AccountOutbox;
 import com.banking.accountservice.entity.AccountPosting;
 import com.banking.accountservice.repository.AccountPostingRepository;
 import com.banking.accountservice.repository.AccountRepository;
 import com.banking.accountservice.repository.AccountStatusHistoryRepository;
 
+import com.banking.accountservice.repository.OutboxRepository;
 import com.banking.accountservice.service.AccountService;
 import com.banking.accountservice.mapper.AccountMapper;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -26,12 +21,16 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.UUID;
+
 @Service
 @Transactional(readOnly = true)
 public class AccountServiceImpl implements AccountService {
@@ -40,16 +39,20 @@ public class AccountServiceImpl implements AccountService {
     private final AccountStatusHistoryRepository historyRepository;
     private final AccountPostingRepository postingRepository;
     private final TransactionTemplate transactionTemplate;
+    private final ObjectMapper objectMapper;
+    private final OutboxRepository outboxRepository;
 
     public AccountServiceImpl(
             AccountRepository accountRepository,
             AccountStatusHistoryRepository historyRepository,
             AccountPostingRepository postingRepository,
-            @Qualifier("accountPostingTransactionTemplate") TransactionTemplate transactionTemplate) {
+            @Qualifier("accountPostingTransactionTemplate") TransactionTemplate transactionTemplate, ObjectMapper objectMapper, OutboxRepository outboxRepository) {
         this.accountRepository = accountRepository;
         this.historyRepository = historyRepository;
         this.postingRepository = postingRepository;
         this.transactionTemplate = transactionTemplate;
+        this.objectMapper = objectMapper;
+        this.outboxRepository = outboxRepository;
     }
 
     @Override
@@ -83,7 +86,8 @@ public class AccountServiceImpl implements AccountService {
         account.setUpdatedAt(now);
 
         Account savedAccount = accountRepository.save(account);
-
+        AccountOutbox accountOutbox=createOutbox(savedAccount,EventType.ACCOUNT_CREATED);
+        outboxRepository.save(accountOutbox);
         return AccountMapper.toResponse(savedAccount);
     }
 
@@ -360,5 +364,34 @@ public class AccountServiceImpl implements AccountService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                     "Access token is missing a valid customer_id claim");
         }
+    }
+    private AccountOutbox createOutbox(Account account,EventType eventType) {
+
+        AccountEvent event = new AccountEvent(
+                UUID.randomUUID().toString(),
+                eventType,
+                account.getCustomerId(),
+                account.getId(),
+                account.getAccountNumber(),
+                account.getAccountType().name(),
+                Instant.now()
+        );
+
+        AccountOutbox outbox = new AccountOutbox();
+
+        outbox.setEventId(event.getEventId());
+        outbox.setAccountId(account.getId());
+        outbox.setEventType(String.valueOf(event.getEventType()));
+
+        outbox.setPayload(
+                objectMapper.writeValueAsString(event)
+        );
+
+        outbox.setStatus(OutboxStatus.PENDING);
+        outbox.setRetryCount(0);
+        outbox.setCreatedAt(Instant.now());
+        outbox.setNextRetryAt(Instant.now());
+
+        return outbox;
     }
 }
