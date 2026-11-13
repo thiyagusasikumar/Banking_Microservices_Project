@@ -4,13 +4,13 @@ import com.banking.authservice.constants.OutboxStatus;
 import com.banking.authservice.dto.AuthEvent;
 import com.banking.authservice.entity.OutboxEvent;
 import com.banking.authservice.repository.OutboxEventRepository;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.ObjectMapper;
 
 import java.time.Instant;
 import java.util.List;
@@ -58,7 +58,7 @@ public class OutboxPublisher {
                         "Interrupted while publishing auth event", e
                 );
 
-            } catch (ExecutionException | JsonProcessingException e) {
+            } catch (ExecutionException | JacksonException e) {
                 recordFailure(event, e);
             }
         }

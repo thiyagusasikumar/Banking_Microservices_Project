@@ -248,11 +248,9 @@ public class AuthService {
     }
 
     public LoginResponse login(LoginRequest loginRequest)  {
-         User user=userRepository.findByUserName(loginRequest.getUserName());
 
-         if (user == null) {
-             throw new AuthenticationFailedException("Invalid username or password");
-         }
+        User user=userRepository.findByUserNameOrEmail(loginRequest.getLoginId(),loginRequest.getLoginId())
+                .orElseThrow(()->new AuthenticationFailedException("Invalid username or password"));
          if(user.getStatus().equals(UserStatus.INACTIVE)){
              throw new AccountNotActiveException();
          }
@@ -260,7 +258,7 @@ public class AuthService {
          formData.add("grant_type", "password");
          formData.add("client_id",clientId);
          formData.add("client_secret",clientSecret);
-         formData.add("username", loginRequest.getUserName());
+         formData.add("username", loginRequest.getLoginId());
          formData.add("password", loginRequest.getPassword());
          try{
              KeycloakTokenResponse tokenResponse=restClient.post().uri(tokenUrl).
