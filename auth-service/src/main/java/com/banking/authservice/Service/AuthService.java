@@ -110,6 +110,7 @@ public class AuthService {
                 request.getFirstName(), request.getLastName(), request.getPhoneNumber(), Roles.CUSTOMER);
 
          updateCustomerId(user,attempt);
+        keycloakUserService.sendVerificationEmail(user.getKeycloakUserId());
         return  userMapper.toRegisterResponse(user);
     }
 
@@ -445,5 +446,12 @@ public class AuthService {
                 user.getEmail(),
                 user.getStatus()
         ));
+    }
+    public void forgotPassword(ForgotPassword forgotPassword) {
+        String loginId = forgotPassword.getLoginId().trim();
+        userRepository.findByUserNameOrEmail(loginId, loginId)
+                .ifPresent(user -> keycloakUserService.sendPasswordResetEmail(
+                        user.getKeycloakUserId()
+                ));
     }
 }

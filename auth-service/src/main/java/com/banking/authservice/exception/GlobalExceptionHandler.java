@@ -14,7 +14,6 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.client.RestClientException;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.util.Objects;
 
 @RestControllerAdvice

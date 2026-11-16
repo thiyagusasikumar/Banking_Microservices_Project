@@ -67,4 +67,12 @@ public class AuthController {
         authService.deactivateUser(keycloakId);
         return ResponseEntity.ok("deactivated");
     }
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(
+            @Valid @RequestBody ForgotPassword forgotPassword) {
+        authService.forgotPassword(forgotPassword);
+        return ResponseEntity.accepted().body(
+                "If an account exists for that login, password reset email will be sent."
+        );
+    }
 }

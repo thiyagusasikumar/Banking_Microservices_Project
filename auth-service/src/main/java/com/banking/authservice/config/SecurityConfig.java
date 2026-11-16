@@ -46,7 +46,8 @@ public class SecurityConfig {
                                 "/actuator/info",
                                 "/auth/login",
                                 "/auth/public/register",
-                                "/auth/refresh"
+                                "/auth/refresh",
+                                "/auth/forgot-password"
                         ).permitAll()
                         .requestMatchers("/auth/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
@@ -127,4 +128,3 @@ public class SecurityConfig {
 //            return new JwtAuthenticationToken(jwt, authorities);
 //        };
 //    }
-

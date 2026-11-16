@@ -9,9 +9,11 @@ import com.banking.authservice.dto.KeycloakTokenResponse;
 import com.banking.authservice.exception.AuthenticationFailedException;
 import com.banking.authservice.exception.KeyCloakCreationException;
 import com.banking.authservice.exception.DuplicateUserException;
+import jakarta.ws.rs.core.HttpHeaders;
 import jakarta.ws.rs.core.Response;
 import jakarta.ws.rs.ProcessingException;
 import jakarta.ws.rs.WebApplicationException;
+import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.admin.client.resource.UserResource;
@@ -29,6 +31,7 @@ import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.HashMap;
 import java.util.List;
@@ -36,6 +39,7 @@ import java.util.Map;
 import java.util.Optional;
 
 @Service
+@Slf4j
 public class KeycloakUserService {
     @Value("${keycloak.client-id}")
     private String clientId;
@@ -349,5 +353,66 @@ public class KeycloakUserService {
                     .realmLevel()
                     .add(List.of(role));
         }
+    }
+    public void sendVerificationEmail(String keycloakUserId) {
+        sendRequiredActionEmail(keycloakUserId, "VERIFY_EMAIL");
+    }
+
+    public void sendPasswordResetEmail(String keycloakUserId) {
+        sendRequiredActionEmail(keycloakUserId, "UPDATE_PASSWORD");
+    }
+
+    private void sendRequiredActionEmail(String keycloakUserId, String action) {
+        String url = UriComponentsBuilder
+                .fromUriString(serverUrl)
+                .pathSegment(
+                        "admin",
+                        "realms",
+                        realm,
+                        "users",
+                        keycloakUserId,
+                        "execute-actions-email"
+                )
+                .build()
+                .encode()
+                .toUriString();
+
+        restClient.put()
+                .uri(url)
+                .header(
+                        HttpHeaders.AUTHORIZATION,
+                        "Bearer " + getAdminAccessToken()
+                )
+                .contentType(MediaType.APPLICATION_JSON)
+                .body(List.of(action))
+                .retrieve()
+                .toBodilessEntity();
+        log.info("Keycloak action email requested: action={}", action);
+    }
+    private String getAdminAccessToken() {
+
+        MultiValueMap<String, String> form =
+                new LinkedMultiValueMap<>();
+
+        form.add("grant_type", "client_credentials");
+        form.add("client_id", clientId);
+        form.add("client_secret", clientSecret);
+
+        Map<String, Object> response = restClient.post()
+                .uri(serverUrl + "/realms/" + realm
+                        + "/protocol/openid-connect/token")
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED)
+                .body(form)
+                .retrieve()
+                .body(new ParameterizedTypeReference<>() {});
+
+        if (response == null ||
+                response.get("access_token") == null) {
+            throw new IllegalStateException(
+                    "Failed to obtain Keycloak admin access token"
+            );
+        }
+
+        return response.get("access_token").toString();
     }
 }
