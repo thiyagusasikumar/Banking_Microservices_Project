@@ -14,7 +14,8 @@ import org.springframework.stereotype.Service;
 public class EmailNotificationService {
     private final JavaMailSender mailSender;
 
-    @Value("${spring.mail.username}")
+//    @Value("${spring.mail.username}")
+    @Value("vijay")
     private String sender;
 
     public void sendRegistrationEmail(String recipientEmail,String customerName) {

@@ -5,6 +5,7 @@ package com.banking.notificationservice.kafkaListener;
 import com.banking.notificationservice.dto.AccountEvent;
 import com.banking.notificationservice.service.NotificationService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.kafka.annotation.KafkaListener;

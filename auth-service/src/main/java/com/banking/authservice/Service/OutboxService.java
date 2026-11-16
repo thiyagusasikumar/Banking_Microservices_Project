@@ -26,8 +26,10 @@ public class OutboxService {
 
         AuthEvent event = new AuthEvent(
                 eventId,
-            "REGISTRATION_COMPLETED",
+                "REGISTRATION_COMPLETED",
                 user.getId(),
+                user.getFirstName() + " " + user.getLastName(),
+                user.getEmail(),
                 Instant.now()
         );
 

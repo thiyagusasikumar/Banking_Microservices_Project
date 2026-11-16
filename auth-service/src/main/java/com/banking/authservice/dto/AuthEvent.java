@@ -6,6 +6,8 @@ public record AuthEvent (
         String eventId,
         String eventType,
         Long customerId,
+        String customerName,
+        String email,
         Instant occurredAt
 ){
 }
