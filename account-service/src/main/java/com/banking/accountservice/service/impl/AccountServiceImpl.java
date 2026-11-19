@@ -327,8 +327,10 @@ public class AccountServiceImpl implements AccountService {
         }
     }
 
-    private Account lockedAccount(Long id) {
-        return id == null ? null : accountRepository.findByIdForUpdate(id).orElse(null);
+    private Account lockedAccount(Long accountNumber) {
+        return accountNumber == null
+                ? null
+                : accountRepository.findByAccountNumberForUpdate(String.valueOf(accountNumber)).orElse(null);
     }
 
     private boolean activeAndMatchingCurrency(Account account, AccountPosting posting) {

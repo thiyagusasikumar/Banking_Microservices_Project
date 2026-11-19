@@ -112,7 +112,7 @@ public class TransactionService {
             return updateStatus(reference, Status.PENDING_RECONCILIATION, "Invalid posting response");
         }
         return switch (result.status()) {
-            case APPLIED -> updateStatus(reference, Status.SUCCESS, null);
+            case APPLIED -> updateStatus(reference, Status.COMPLETED, null);
             case REJECTED -> updateStatus(reference, Status.FAILED,
                     result.failureReason() == null ? "Account Service rejected the operation" : result.failureReason());
         };
@@ -132,7 +132,7 @@ public class TransactionService {
     }
 
     private boolean terminal(Status status) {
-        return status == Status.SUCCESS || status == Status.COMPLETED || status == Status.FAILED;
+        return status == Status.COMPLETED || status == Status.FAILED;
     }
 
     private TransactionRecord sameRequest(TransactionRecord existing, Type type, String source,
