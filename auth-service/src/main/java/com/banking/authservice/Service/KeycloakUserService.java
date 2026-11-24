@@ -248,7 +248,7 @@ public class KeycloakUserService {
         userResource.update(representation);
     }
 
-    public Map<String, Object> refreshToken(String refreshToken) {
+    public KeycloakTokenResponse refreshToken(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new ResponseStatusException(
                     HttpStatus.BAD_REQUEST,
@@ -274,7 +274,7 @@ public class KeycloakUserService {
                     .contentType(MediaType.APPLICATION_FORM_URLENCODED)
                     .body(form)
                     .retrieve()
-                    .body(new ParameterizedTypeReference<Map<String, Object>>() {});
+                    .body(KeycloakTokenResponse.class);
 
         } catch (HttpClientErrorException.BadRequest
                  | HttpClientErrorException.Unauthorized ex) {

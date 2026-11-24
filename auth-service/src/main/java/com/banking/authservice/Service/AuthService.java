@@ -248,7 +248,7 @@ public class AuthService {
         );
     }
 
-    public LoginResponse login(LoginRequest loginRequest)  {
+    public LoginResult login(LoginRequest loginRequest)  {
 
         User user=userRepository.findByUserNameOrEmail(loginRequest.getLoginId(),loginRequest.getLoginId())
                 .orElseThrow(()->new AuthenticationFailedException("Invalid username or password"));
@@ -271,7 +271,8 @@ public class AuthService {
              if(tokenResponse==null || tokenResponse.getAccessToken()==null){
                  throw new RestClientException("Keycloak returned an invalid token response");
              }
-             return userMapper.toLoginResponse(tokenResponse);
+             LoginResponse loginResponse=userMapper.toLoginResponse(tokenResponse);
+             return new LoginResult(loginResponse,tokenResponse.getRefreshToken(),tokenResponse.getExpiresIn());
 
          }
          catch (HttpClientErrorException.BadRequest
@@ -281,6 +282,21 @@ public class AuthService {
                      "Invalid username or password");
 
          }
+    }
+    public LoginResult refreshToken(String refreshToken) {
+        try {
+            KeycloakTokenResponse tokenResponse = keycloakUserService.refreshToken(refreshToken);
+
+            if (tokenResponse == null || tokenResponse.getAccessToken() == null || tokenResponse.getRefreshToken() == null) {
+                throw new AuthenticationFailedException("Invalid refresh token");
+            }
+            LoginResponse loginResponse = userMapper.toLoginResponse(tokenResponse);
+
+            return new LoginResult(loginResponse,tokenResponse.getRefreshToken(),tokenResponse.getExpiresIn());
+        }
+        catch (HttpClientErrorException.BadRequest | HttpClientErrorException.Unauthorized ex){
+            throw new AuthenticationFailedException("refresh token is invalid or expired");
+        }
     }
     public UserUpdateResponse userUpdate(String keycloakUserId, UserUpdateRequest updateRequest) {
         User user = userRepository.findByKeycloakUserId(keycloakUserId)

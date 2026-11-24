@@ -45,6 +45,7 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/actuator/info",
                                 "/auth/login",
+                                "/auth/logout",
                                 "/auth/public/register",
                                 "/auth/refresh",
                                 "/auth/forgot-password"
