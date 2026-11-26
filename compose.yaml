@@ -1,51 +1,330 @@
-services:
+# Local development stack. Runtime secrets are supplied by the git-ignored .env file.
+x-app: &app
+  restart: unless-stopped
+  init: true
+  mem_limit: 640m
+  stop_grace_period: 30s
 
-#  transaction-db:
-#    image: postgres:17-alpine
-#    environment:
-#      POSTGRES_DB: transaction_db
-#      POSTGRES_USER: transaction_user
-#      POSTGRES_PASSWORD: transaction_password
-#    ports:
-#      - "5432:5432"
-#    volumes:
-#      - transaction-db-data:/var/lib/postgresql/data
-#    healthcheck:
-#      test: ["CMD-SHELL", "pg_isready -U transaction_user -d transaction_db"]
-#      interval: 5s
-#      timeout: 3s
-#      retries: 10
-#
-#  auth-db:
-#    image: postgres:17-alpine
-#    environment:
-#      POSTGRES_DB: auth_db
-#      POSTGRES_USER: auth_user
-#      POSTGRES_PASSWORD: auth_password
-#    ports:
-#      - "5433:5432"
-#    volumes:
-#      - auth-db-data:/var/lib/postgresql/data
-#    healthcheck:
-#      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
-#      interval: 5s
-#      timeout: 3s
-#      retries: 10
+x-app-environment: &app-environment
+  EUREKA_SERVER_URL: http://eureka-server:8761/eureka/
+  SPRING_KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+  SPRING_JPA_SHOW_SQL: "false"
+  JAVA_TOOL_OPTIONS: -XX:MaxRAMPercentage=50.0 -XX:+ExitOnOutOfMemoryError
+
+x-jwt-environment: &jwt-environment
+  KEYCLOAK_SERVER_URL: http://keycloak:8080
+  KEYCLOAK_REALM: banking-service
+  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_ISSUER_URI: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}/realms/banking-service
+  SPRING_SECURITY_OAUTH2_RESOURCESERVER_JWT_JWK_SET_URI: http://keycloak:8080/realms/banking-service/protocol/openid-connect/certs
+
+services:
+  transaction-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: transaction_db
+      POSTGRES_USER: transaction_user
+      POSTGRES_PASSWORD: ${TRANSACTION_DB_PASSWORD:?Set TRANSACTION_DB_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5434:5432"
+    volumes:
+      - transaction-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U transaction_user -d transaction_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  auth-db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: auth_user
+      POSTGRES_PASSWORD: ${AUTH_DB_PASSWORD:?Set AUTH_DB_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - auth-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U auth_user -d auth_db"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
 
   keycloak:
-    image: quay.io/keycloak/keycloak:latest
+    # Preserve the exact Keycloak 26.8.1 image used by the existing local realm.
+    image: quay.io/keycloak/keycloak@sha256:a78d6b79572168cb25886b80a8b5b8d4ed4390743e3eecb810538683e209dd6b
     command: start-dev
+    restart: unless-stopped
+    mem_limit: 768m
     environment:
-      KC_BOOTSTRAP_ADMIN_USERNAME: keycloak-admin
-      KC_BOOTSTRAP_ADMIN_PASSWORD: keycloak-admin
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-keycloak-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?Set KEYCLOAK_ADMIN_PASSWORD in .env}
+      KC_HOSTNAME: ${KEYCLOAK_PUBLIC_URL:-http://localhost:8080}
+      KC_HOSTNAME_BACKCHANNEL_DYNAMIC: "true"
+      KC_HEALTH_ENABLED: "true"
+      JAVA_OPTS_KC_HEAP: -XX:MaxRAMPercentage=60.0
     ports:
-      - "8080:8080"
+      - "127.0.0.1:8080:8080"
+    volumes:
+      - keycloak-data:/opt/keycloak/data
+    healthcheck:
+      test: ["CMD", "bash", "-ec", "exec 3<>/dev/tcp/127.0.0.1/9000; printf 'GET /health/ready HTTP/1.0\r\n\r\n' >&3; grep -q '200 OK' <&3"]
+      interval: 10s
+      timeout: 5s
+      start_period: 90s
+      retries: 12
 
   kafka:
     image: apache/kafka:3.9.1
+    restart: unless-stopped
+    mem_limit: 768m
+    environment:
+      CLUSTER_ID: ${KAFKA_CLUSTER_ID:?Set the existing KAFKA_CLUSTER_ID in .env}
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: INTERNAL://0.0.0.0:29092,EXTERNAL://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:29092,EXTERNAL://localhost:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_LOG_DIRS: /var/lib/kafka/data
+      KAFKA_HEAP_OPTS: -Xms256m -Xmx384m
     ports:
-      - "9092:9092"
+      - "127.0.0.1:9092:9092"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: ["CMD", "/opt/kafka/bin/kafka-topics.sh", "--bootstrap-server", "kafka:29092", "--list"]
+      interval: 15s
+      timeout: 10s
+      start_period: 60s
+      retries: 12
 
-#volumes:
-#  transaction-db-data:
-#  auth-db-data:
+  mailpit:
+    image: axllent/mailpit:v1.27.4
+    restart: unless-stopped
+    environment:
+      MP_DATABASE: /data/mailpit.db
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    volumes:
+      - mailpit-data:/data
+
+  eureka-server:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: eureka-server
+    image: banking/eureka-server:local
+    environment:
+      <<: *app-environment
+      SERVER_PORT: 8761
+      EUREKA_INSTANCE_HOSTNAME: eureka-server
+      HEALTHCHECK_PATH: /actuator/health
+    ports:
+      - "127.0.0.1:8761:8761"
+
+  auth-service:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: auth-service
+    image: banking/auth-service:local
+    environment:
+      <<: [*app-environment, *jwt-environment]
+      SERVER_PORT: 8081
+      SPRING_DATASOURCE_URL: jdbc:postgresql://auth-db:5432/auth_db
+      SPRING_DATASOURCE_USERNAME: auth_user
+      SPRING_DATASOURCE_PASSWORD: ${AUTH_DB_PASSWORD:?Set AUTH_DB_PASSWORD in .env}
+      KEYCLOAK_CLIENT_SECRET: ${KEYCLOAK_CLIENT_SECRET:?Set KEYCLOAK_CLIENT_SECRET in .env}
+    ports:
+      - "127.0.0.1:8081:8081"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      auth-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  account-service:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: account-service
+    image: banking/account-service:local
+    environment:
+      <<: [*app-environment, *jwt-environment]
+      SERVER_PORT: 8082
+      SPRING_DATASOURCE_URL: jdbc:postgresql://transaction-db:5432/baccount_db
+      SPRING_DATASOURCE_USERNAME: ${BANKING_DB_USERNAME:-banking_local}
+      SPRING_DATASOURCE_PASSWORD: ${BANKING_DB_PASSWORD:?Set BANKING_DB_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:8082:8082"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      transaction-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  transaction-service:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: transaction-service
+    image: banking/transaction-service:local
+    environment:
+      <<: *app-environment
+      SERVER_PORT: 8083
+      SPRING_DATASOURCE_URL: jdbc:postgresql://transaction-db:5432/transaction_db
+      SPRING_DATASOURCE_USERNAME: ${BANKING_DB_USERNAME:-banking_local}
+      SPRING_DATASOURCE_PASSWORD: ${BANKING_DB_PASSWORD:?Set BANKING_DB_PASSWORD in .env}
+      ACCOUNT_SERVICE_BASE_URL: http://account-service:8082
+    ports:
+      - "127.0.0.1:8083:8083"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      transaction-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+
+  ledger-service:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: ledger-service
+    image: banking/ledger-service:local
+    environment:
+      <<: *app-environment
+      SERVER_PORT: 8084
+      SPRING_DATASOURCE_URL: jdbc:postgresql://transaction-db:5432/ledger_db
+      SPRING_DATASOURCE_USERNAME: ${BANKING_DB_USERNAME:-banking_local}
+      SPRING_DATASOURCE_PASSWORD: ${BANKING_DB_PASSWORD:?Set BANKING_DB_PASSWORD in .env}
+    ports:
+      - "127.0.0.1:8084:8084"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      transaction-db:
+        condition: service_healthy
+
+  notification-service:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: notification-service
+    image: banking/notification-service:local
+    environment:
+      <<: [*app-environment, *jwt-environment]
+      SERVER_PORT: 8085
+      SPRING_DATASOURCE_URL: jdbc:postgresql://transaction-db:5432/notification_db
+      SPRING_DATASOURCE_USERNAME: ${BANKING_DB_USERNAME:-banking_local}
+      SPRING_DATASOURCE_PASSWORD: ${BANKING_DB_PASSWORD:?Set BANKING_DB_PASSWORD in .env}
+      SPRING_MAIL_HOST: mailpit
+      SPRING_MAIL_PORT: 1025
+      MAIL_USERNAME: banking-local@example.test
+      MAIL_PASSWORD: unused-local-smtp
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_AUTH: "false"
+      SPRING_MAIL_PROPERTIES_MAIL_SMTP_STARTTLS_ENABLE: "false"
+    ports:
+      - "127.0.0.1:8085:8085"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      transaction-db:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      mailpit:
+        condition: service_started
+
+  approval-service:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: approval-service
+    image: banking/approval-service:local
+    environment:
+      <<: *app-environment
+      SERVER_PORT: 8086
+    ports:
+      - "127.0.0.1:8086:8086"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+
+  reconciliation-service:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: reconciliation-service
+    image: banking/reconciliation-service:local
+    environment:
+      <<: *app-environment
+      SERVER_PORT: 8087
+    ports:
+      - "127.0.0.1:8087:8087"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+
+  api-gateway:
+    <<: *app
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        SERVICE: api-gateway
+    image: banking/api-gateway:local
+    environment:
+      <<: [*app-environment, *jwt-environment]
+      SERVER_PORT: 8090
+      HEALTHCHECK_PATH: /actuator/health
+      GATEWAY_ALLOWED_ORIGINS: ${GATEWAY_ALLOWED_ORIGINS:-http://localhost:5173}
+    ports:
+      - "127.0.0.1:8090:8090"
+    depends_on:
+      eureka-server:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+volumes:
+  transaction-db-data:
+  auth-db-data:
+  keycloak-data:
+  kafka-data:
+  mailpit-data:

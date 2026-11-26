@@ -1,0 +1,16 @@
+**
+!Dockerfile
+!docker/
+!docker/ContainerHealthcheck.java
+!*-service/
+!*-service/pom.xml
+!*-service/src/
+!*-service/src/**
+!api-gateway/
+!api-gateway/pom.xml
+!api-gateway/src/
+!api-gateway/src/**
+!eureka-server/
+!eureka-server/pom.xml
+!eureka-server/src/
+!eureka-server/src/**
