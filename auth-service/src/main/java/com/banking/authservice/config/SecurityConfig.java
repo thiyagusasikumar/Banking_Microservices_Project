@@ -31,7 +31,8 @@ public class SecurityConfig {
             HttpSecurity http) throws Exception {
 
         http
-                .cors(cors->{})
+                .cors(cors -> {
+                })
                 .csrf(AbstractHttpConfigurer::disable)
 
                 .sessionManagement(session ->
@@ -45,8 +46,10 @@ public class SecurityConfig {
                                 "/actuator/health",
                                 "/actuator/info",
                                 "/auth/login",
+                                "/auth/logout",
                                 "/auth/public/register",
-                                "/auth/refresh"
+                                "/auth/refresh",
+                                "/auth/forgot-password"
                         ).permitAll()
                         .requestMatchers("/auth/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
@@ -62,25 +65,40 @@ public class SecurityConfig {
 
         return http.build();
     }
+
     @Bean
-    CorsConfigurationSource corsConfigurationSource() {
+    public CorsConfigurationSource corsConfigurationSource() {
+
         CorsConfiguration configuration = new CorsConfiguration();
 
-        configuration.setAllowedOrigins(List.of("http://localhost:5173"));
-        configuration.setAllowedMethods(List.of(
-                "GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"
-        ));
-        configuration.setAllowedHeaders(List.of(
-                "Authorization", "Content-Type"
-        ));
+        // Allow React frontend
+        configuration.setAllowedOrigins(
+                List.of("http://localhost:5173")
+        );
+
+        // Allowed HTTP methods
+        configuration.setAllowedMethods(
+                List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
+        );
+
+        // Allowed request headers
+        configuration.setAllowedHeaders(
+                List.of("Authorization", "Content-Type", "Accept")
+        );
+
+        // Required for HttpOnly refresh-token cookies
+        configuration.setAllowCredentials(true);
+
+        // Cache preflight response for 1 hour
+        configuration.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source =
                 new UrlBasedCorsConfigurationSource();
 
         source.registerCorsConfiguration("/**", configuration);
+
         return source;
     }
-
 }
 //    @Bean
 //    Converter<Jwt, AbstractAuthenticationToken> jwtAuthenticationConverter() {
@@ -127,4 +145,11 @@ public class SecurityConfig {
 //            return new JwtAuthenticationToken(jwt, authorities);
 //        };
 //    }
+
+
+
+
+
+
+
 

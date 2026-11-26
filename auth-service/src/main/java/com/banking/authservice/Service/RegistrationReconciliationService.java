@@ -24,6 +24,7 @@ public class RegistrationReconciliationService {
     private final KeycloakUserService keycloakUserService;
     private final UserRepository userRepository;
     private final UserMapper userMapper;
+    private final UserRegistrationPersistenceService userRegistrationPersistenceService;
 
     public RegisterResponse reconcileAttempt(RegistrationAttempt attempt) {
 
@@ -117,6 +118,6 @@ public class RegistrationReconciliationService {
         }
         user.setRole(role);
 
-        return userRepository.save(user);
+        return userRegistrationPersistenceService.saveUserAndOutboxEvent(user);
     }
 }

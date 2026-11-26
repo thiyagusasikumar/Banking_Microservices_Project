@@ -1,11 +1,7 @@
 package com.banking.authservice.Service;
 
 
-import com.banking.authservice.constants.EmployeeRoles;
-import com.banking.authservice.constants.RegistrationAttemptStatus;
-import com.banking.authservice.constants.RegistrationType;
-import com.banking.authservice.constants.Roles;
-import com.banking.authservice.constants.UserStatus;
+import com.banking.authservice.constants.*;
 import com.banking.authservice.dto.*;
 import com.banking.authservice.entity.RegistrationAttempt;
 import com.banking.authservice.entity.User;
@@ -80,6 +76,7 @@ public class AuthService {
 
         Optional<UserRepresentation> keycloakUser=keycloakUserService.findUserByRegistrationAttempt(attempt.getAttemptId());
         if(keycloakUser.isPresent()){
+           verifyMatchingIdentity(keycloakUser.get(), request.getUserName(), request.getEmail());
            keycloakUserService.verifyCredentials(
                    request.getUserName(),
                    request.getPassword()
@@ -97,6 +94,7 @@ public class AuthService {
                     attempt,
                     ex,
                     request.getUserName(),
+                    request.getEmail(),
                     request.getPassword(),
                     true
             );
@@ -110,6 +108,7 @@ public class AuthService {
                 request.getFirstName(), request.getLastName(), request.getPhoneNumber(), Roles.CUSTOMER);
 
          updateCustomerId(user,attempt);
+        keycloakUserService.sendVerificationEmail(user.getKeycloakUserId());
         return  userMapper.toRegisterResponse(user);
     }
 
@@ -131,9 +130,10 @@ public class AuthService {
 
        Optional<UserRepresentation> keycloakUser =
                keycloakUserService.findUserByRegistrationAttempt(attempt.getAttemptId());
-       if (keycloakUser.isPresent()) {
-           return registrationReconciliationService.reconcileAttempt(attempt);
-       }
+        if (keycloakUser.isPresent()) {
+            verifyMatchingIdentity(keycloakUser.get(), request.getUserName(), request.getEmail());
+            return registrationReconciliationService.reconcileAttempt(attempt);
+        }
 
        String keycloakUserId;
        try {
@@ -145,10 +145,11 @@ public class AuthService {
        } catch (DuplicateUserException ex) {
            return reconcileDuplicateRegistration(
                    attempt,
-                   ex,
-                   request.getUserName(),
-                   request.getPassword(),
-                   false
+                    ex,
+                    request.getUserName(),
+                    request.getEmail(),
+                    request.getPassword(),
+                    false
            );
        }
        registrationAttemptService.updateKeycloakUserId(
@@ -171,32 +172,44 @@ public class AuthService {
           Roles registrationRole
     ) {
        Optional<RegistrationAttempt> incompleteAttempt =
-              registrationAttemptService.findIncompleteAttempt(userName, registrationType);
-       if (incompleteAttempt.isPresent()) {
-           return incompleteAttempt.get();
-       }
+               registrationAttemptService.findIncompleteAttempt(userName, registrationType);
+        if (incompleteAttempt.isPresent()) {
+            RegistrationAttempt attempt = incompleteAttempt.get();
+            if (attempt.getEmail() == null) {
+                registrationAttemptService.updateEmail(attempt.getAttemptId(), email);
+            } else if (!attempt.getEmail().equalsIgnoreCase(email)) {
+                throw new DuplicateUserException(
+                        "Username already exists with a different email");
+            }
+            return attempt;
+        }
 
-       userIsAvailable(userName, email);
-       return registrationAttemptService.startRegistrationAttempt(
-               userName,
-               registrationType,
-               registrationRole
-       );
+        userIsAvailable(userName, email);
+        return registrationAttemptService.startRegistrationAttempt(
+                userName,
+                email,
+                registrationType,
+                registrationRole
+        );
     }
 
     private RegisterResponse reconcileDuplicateRegistration(
-           RegistrationAttempt attempt,
-           DuplicateUserException exception,
-           String userName,
-           String password,
-           boolean verifyCredentials
+            RegistrationAttempt attempt,
+            DuplicateUserException exception,
+            String userName,
+            String email,
+            String password,
+            boolean verifyCredentials
     ) {
-       if (keycloakUserService.findUserByRegistrationAttempt(attempt.getAttemptId()).isPresent()) {
-           if (verifyCredentials) {
-               keycloakUserService.verifyCredentials(userName, password);
-           }
-           return registrationReconciliationService.reconcileAttempt(attempt);
-       }
+        Optional<UserRepresentation> existingUser =
+                keycloakUserService.findUserByRegistrationAttempt(attempt.getAttemptId());
+        if (existingUser.isPresent()) {
+            verifyMatchingIdentity(existingUser.get(), userName, email);
+            if (verifyCredentials) {
+                keycloakUserService.verifyCredentials(userName, password);
+            }
+            return registrationReconciliationService.reconcileAttempt(attempt);
+        }
 
        registrationAttemptService.updateStatus(
                attempt.getAttemptId(),
@@ -212,6 +225,20 @@ public class AuthService {
 
         if (userRepository.findByEmail(email).isPresent()) {
             throw new DuplicateUserException("Email already exists");
+        }
+    }
+
+    private void verifyMatchingIdentity(
+            UserRepresentation keycloakUser, String userName, String email) {
+        if (keycloakUser.getUsername() != null
+                && !keycloakUser.getUsername().equals(userName)) {
+            throw new DuplicateUserException(
+                    "Username already exists with different registration details");
+        }
+        if (keycloakUser.getEmail() != null
+                && !keycloakUser.getEmail().equalsIgnoreCase(email)) {
+            throw new DuplicateUserException(
+                    "Email already exists with different registration details");
         }
     }
 
@@ -247,14 +274,17 @@ public class AuthService {
         );
     }
 
-    public LoginResponse login(LoginRequest loginRequest)  {
+    public LoginResult login(LoginRequest loginRequest)  {
 
         User user=userRepository.findByUserNameOrEmail(loginRequest.getLoginId(),loginRequest.getLoginId())
-                .orElseThrow(()->new AuthenticationFailedException("Invalid username or password"));
+                .orElseThrow(()->new AuthenticationFailedException(ErrorCode.INVALID_USERNAME_OR_PASSWORD,"Invalid username or password"));
+
+         keycloakUserService.verifyCredentials(user.getUserName(), loginRequest.getPassword());
+
          if(user.getStatus().equals(UserStatus.INACTIVE)){
              throw new AccountNotActiveException();
-         }
-         MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
+          }
+          MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
          formData.add("grant_type", "password");
          formData.add("client_id",clientId);
          formData.add("client_secret",clientSecret);
@@ -270,16 +300,32 @@ public class AuthService {
              if(tokenResponse==null || tokenResponse.getAccessToken()==null){
                  throw new RestClientException("Keycloak returned an invalid token response");
              }
-             return userMapper.toLoginResponse(tokenResponse);
+              LoginResponse loginResponse=userMapper.toLoginResponse(tokenResponse);
+              return new LoginResult(loginResponse,tokenResponse.getRefreshToken(),tokenResponse.getRefreshExpiresIn());
 
          }
          catch (HttpClientErrorException.BadRequest
                 | HttpClientErrorException.Unauthorized ex) {
 
-             throw new AuthenticationFailedException(
+             throw new AuthenticationFailedException(ErrorCode.INVALID_USERNAME_OR_PASSWORD,
                      "Invalid username or password");
 
          }
+    }
+    public LoginResult refreshToken(String refreshToken) {
+        try {
+            KeycloakTokenResponse tokenResponse = keycloakUserService.refreshToken(refreshToken);
+
+            if (tokenResponse == null || tokenResponse.getAccessToken() == null || tokenResponse.getRefreshToken() == null) {
+                throw new AuthenticationFailedException(ErrorCode.REFRESH_TOKEN_INVALID,"Invalid refresh token");
+            }
+             LoginResponse loginResponse = userMapper.toLoginResponse(tokenResponse);
+
+             return new LoginResult(loginResponse,tokenResponse.getRefreshToken(),tokenResponse.getRefreshExpiresIn());
+        }
+        catch (HttpClientErrorException.BadRequest | HttpClientErrorException.Unauthorized ex){
+            throw new AuthenticationFailedException(ErrorCode.REFRESH_TOKEN_EXPIRED,"refresh token is invalid or expired");
+        }
     }
     public UserUpdateResponse userUpdate(String keycloakUserId, UserUpdateRequest updateRequest) {
         User user = userRepository.findByKeycloakUserId(keycloakUserId)
@@ -331,7 +377,7 @@ public class AuthService {
                     .toBodilessEntity();
         } catch (HttpClientErrorException.BadRequest
                  | HttpClientErrorException.Unauthorized ex) {
-            throw new AuthenticationFailedException("Refresh token is invalid or expired");
+            throw new AuthenticationFailedException(ErrorCode.REFRESH_TOKEN_EXPIRED,"Refresh token is invalid or expired");
         }
     }
     public CurrentUserResponse getCurrentUser(String keycloakUserId)
@@ -366,7 +412,7 @@ public class AuthService {
         UserStatus previousStatus = user.getStatus();
         if (previousStatus == newStatus) {
             throw new InvalidCredentialsException(
-                    newStatus == UserStatus.ACTIVE ? "User is active" : "User is inactive"
+                    ErrorCode.USER_IS_INACTIVE,newStatus == UserStatus.ACTIVE ? "User is active" : "User is inactive"
             );
         }
 
@@ -445,5 +491,12 @@ public class AuthService {
                 user.getEmail(),
                 user.getStatus()
         ));
+    }
+    public void forgotPassword(ForgotPassword forgotPassword) {
+        String loginId = forgotPassword.getLoginId().trim();
+        userRepository.findByUserNameOrEmail(loginId, loginId)
+                .ifPresent(user -> keycloakUserService.sendPasswordResetEmail(
+                        user.getKeycloakUserId()
+                ));
     }
 }

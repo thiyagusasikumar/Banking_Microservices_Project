@@ -1,0 +1,379 @@
+{
+  "info": {
+    "_postman_id": "07322972-3209-463e-bdc1-3aee45945902",
+    "name": "Banking Application - Auth Service",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "_exporter_id": "56281092",
+    "_collection_link": "https://go.postman.co/collection/56281092-07322972-3209-463e-bdc1-3aee45945902?source=collection_link"
+  },
+  "item": [
+    {
+      "name": "01- Register",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"userName\": \"vijay7\",\r\n  \"email\": \"vijayvece2027@gmail.com\",\r\n  \"password\": \"sona6@123\",\r\n  \"firstName\": \"sona\",\r\n  \"lastName\": \"v\",\r\n  \"phoneNumber\":7890345643\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/public/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "public",
+            "register"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "02-Login",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n    \"loginId\": \"seeman\",\r\n    \"password\": \"seeman@123\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "03-Token Refresh",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "",
+            "value": "",
+            "disabled": true
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/refresh",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "refresh"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "04-Get User details",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "me"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "05-Update customer details",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"email\": \"vijays@example.com\",\r\n  \"firstName\": \"vijays\",\r\n  \"lastName\": \"V\",\r\n  \"phoneNumber\":\"9443322110\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/me/update",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "me",
+            "update"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "06-Logout",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [
+          {
+            "key": "",
+            "value": "",
+            "disabled": true
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/logout",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "logout"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "07-Register Employee-Admin",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJtZWE5T3NYdkYyQldRX2cxdnpLM3JQQ25BcXowVUt4bG42RmZ2dV9vWEZZIn0.eyJleHAiOjE3OTI1ODA2NjAsImlhdCI6MTc5MjU4MDM2MCwianRpIjoib25ydHJvOmY2ODFmM2M2LTEzMTYtZWMwMS0xY2FhLTYwZmZhMjlkOGFjYSIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA4MC9yZWFsbXMvYmFua2luZy1zZXJ2aWNlIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6Ijk5OTdhNGM0LThjODMtNDkwNS1hMGY1LTg0OTU5MTFlZWEzMyIsInR5cCI6IkJlYXJlciIsImF6cCI6ImJhbmtpbmctYXV0aC1zZXJ2aWNlIiwic2lkIjoiNG9fTnoyM091NnhWRTJLUzBKd2hTaFY2IiwiYWNyIjoiMSIsInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJkZWZhdWx0LXJvbGVzLWJhbmtpbmctc2VydmljZSIsIm9mZmxpbmVfYWNjZXNzIiwiQURNSU4iLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6IlN5c3RlbSBBZG1pbmlzdHJhdG9yIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic3VwZXJhZG1pbiIsImdpdmVuX25hbWUiOiJTeXN0ZW0iLCJmYW1pbHlfbmFtZSI6IkFkbWluaXN0cmF0b3IiLCJlbWFpbCI6InN1cGVyYWRtaW5AYmFua2luZy5jb20ifQ.P3BmHF0Uizs74awu94bqL0qmyWdpAO0RqyLGSKOFIye3OtHEIjzrgNzoZW03VAwiTkCb4B6CbwjVrrAbQFu7ALFXctRFWSMliHNMCXCecnaG3fvfqZp_stMcBdTfETgea8IB2IRsXxktsuhpKt9a0-zlCbS6evF5lTNlPnDEU2mwLpYXvwgeIewaMMwBVbxZZzMf4h-xErYKy2iWegyKOQ_aHNZcs5GY4lTpXBeY0-QpQJzz_xDvN-DV53r34Qt2GpoKSr5fzaZMHLhuCYi3aQOTNvnNRgtZeG5W41xpH1bUYuAI7f7Z-vvhZQLmnnqShbnRnKnfUtG0IcacXEhDLQ",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"userName\": \"vijay\",\r\n  \"email\": \"vijay@example.com\",\r\n  \"password\": \"vijay@123\",\r\n  \"firstName\": \"vijay\",\r\n  \"lastName\": \"V\",\r\n   \"role\":\"marker\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/admin/employees",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "admin",
+            "employees"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "08-Get all users -Admin",
+      "request": {
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJtZWE5T3NYdkYyQldRX2cxdnpLM3JQQ25BcXowVUt4bG42RmZ2dV9vWEZZIn0.eyJleHAiOjE3OTI3NTUxNDIsImlhdCI6MTc5Mjc1NDg0MiwianRpIjoib25ydHJvOjYyNzU4MjVmLTExOTMtY2ZkYS0xZTBlLTY4OWE3N2M4MTI3OSIsImlzcyI6Imh0dHA6Ly9sb2NhbGhvc3Q6ODA4MC9yZWFsbXMvYmFua2luZy1zZXJ2aWNlIiwiYXVkIjoiYWNjb3VudCIsInN1YiI6Ijk5OTdhNGM0LThjODMtNDkwNS1hMGY1LTg0OTU5MTFlZWEzMyIsInR5cCI6IkJlYXJlciIsImF6cCI6ImJhbmtpbmctYXV0aC1zZXJ2aWNlIiwic2lkIjoiZEw0M2RzZkUzVF9hdHRZcG9RdHpmRjRfIiwiYWNyIjoiMSIsInJlYWxtX2FjY2VzcyI6eyJyb2xlcyI6WyJkZWZhdWx0LXJvbGVzLWJhbmtpbmctc2VydmljZSIsIm9mZmxpbmVfYWNjZXNzIiwiQURNSU4iLCJ1bWFfYXV0aG9yaXphdGlvbiJdfSwicmVzb3VyY2VfYWNjZXNzIjp7ImFjY291bnQiOnsicm9sZXMiOlsibWFuYWdlLWFjY291bnQiLCJtYW5hZ2UtYWNjb3VudC1saW5rcyIsInZpZXctcHJvZmlsZSJdfX0sInNjb3BlIjoicHJvZmlsZSBlbWFpbCIsImVtYWlsX3ZlcmlmaWVkIjpmYWxzZSwibmFtZSI6IlN5c3RlbSBBZG1pbmlzdHJhdG9yIiwicHJlZmVycmVkX3VzZXJuYW1lIjoic3VwZXJhZG1pbiIsImdpdmVuX25hbWUiOiJTeXN0ZW0iLCJmYW1pbHlfbmFtZSI6IkFkbWluaXN0cmF0b3IiLCJlbWFpbCI6InN1cGVyYWRtaW5AYmFua2luZy5jb20ifQ.XIXZ6URZff0o2vOYyvBreLj91IgfykWmRYvgOoXCiAfvLioJ1yowe9zc4tu6W0N-CUCi2joylD-pgXsx6Ck4X2lLjt7YjakoqQWBjhTGT0gqQL-e7x_We4H1XHh1J0MMXWxO5vj3kL7Yp4vyEjehhqmp2gaPq0-ljY2lPvW0g6D8UMmQEjbbudP3EFJ6KepDbQdLe8p63OmNpJ8o1OUi6aHksEf813hb3ESdDjvC90_ooaNoutRPFT6skYLETDNz0EYKZ_PTSOOGy5-bFJsnacWE6uuYFdbmZnIJsJph0tb2vOrbjpoe8w_Dp5HWwLLQcmLmGWR60dyCHzNVNBEirQ",
+              "type": "string"
+            }
+          ]
+        },
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/admin/users?sortBy=userName",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "admin",
+            "users"
+          ],
+          "query": [
+            {
+              "key": "sortBy",
+              "value": "userName"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "09-get user-Admin",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/admin/users/{{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "admin",
+            "users",
+            "{{userId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "10-Deactivate users -Admin",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/admin/users/deactivate/{{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "admin",
+            "users",
+            "deactivate",
+            "{{userId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "11-Activate user-Admin",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/admin/users/activate/{{userId}}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "admin",
+            "users",
+            "activate",
+            "{{userId}}"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "12-Forgot-Password",
+      "request": {
+        "auth": {
+          "type": "noauth"
+        },
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "raw",
+          "raw": "{\r\n  \"loginId\":\"vijay4\"\r\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{baseUrl}}/auth/forgot-password",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "forgot-password"
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{accessToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": ""
+    },
+    {
+      "key": "userId",
+      "value": ""
+    },
+    {
+      "key": "accessToken",
+      "value": ""
+    }
+  ]
+}
