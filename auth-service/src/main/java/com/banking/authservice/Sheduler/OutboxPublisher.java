@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import tools.jackson.core.JacksonException;
 import tools.jackson.databind.ObjectMapper;
 
@@ -32,6 +33,7 @@ public class OutboxPublisher {
     private String authEventsTopic;
 
     @Scheduled(fixedDelay = 5000)
+    @Transactional
     public void publishPendingEvents() {
 
         List<OutboxEvent> events =

@@ -9,7 +9,7 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.Optional;
 
-public interface UserRepository extends JpaRepository<User,Long> {
+public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByKeycloakUserId(String keycloakUserId);
 
@@ -21,15 +21,15 @@ public interface UserRepository extends JpaRepository<User,Long> {
 
 
     @Query("""
-        SELECT u
-        FROM User u
-        WHERE (
-            :query IS NULL
-            OR :query = ''
-            OR LOWER(u.userName) LIKE LOWER(CONCAT('%', :query, '%'))
-            OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))
-        )
-        """)
+            SELECT u
+            FROM User u
+            WHERE (
+                :query IS NULL
+                OR :query = ''
+                OR LOWER(u.userName) LIKE LOWER(CONCAT('%', :query, '%'))
+                OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))
+            )
+            """)
     Page<User> searchUsers(
             @Param("query") String query,
             Pageable pageable

@@ -11,13 +11,13 @@ import java.time.Duration;
 
 @Component
 public class CookieUtil {
-    public void addRefreshTokenToCookie(HttpServletResponse httpServletResponse, String refreshToken,long expiresIn) {
+    public void addRefreshTokenToCookie(HttpServletResponse httpServletResponse, String refreshToken,long refreshExpiresIn) {
         ResponseCookie cookie = ResponseCookie.from(ApplicationConstants.REFRESH_TOKEN_COOKIE,refreshToken)
                 .httpOnly(true)
                 .secure(true)
                 .path(ApplicationConstants.COOKIE_PATH)
                 .sameSite("Lax")
-                .maxAge(Duration.ofSeconds(expiresIn))
+                .maxAge(Duration.ofSeconds(refreshExpiresIn))
                 .build();
 
         httpServletResponse.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());

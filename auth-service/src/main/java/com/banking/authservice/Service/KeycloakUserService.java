@@ -1,6 +1,7 @@
 package com.banking.authservice.Service;
 
 import com.banking.authservice.constants.EmployeeRoles;
+import com.banking.authservice.constants.ErrorCode;
 import com.banking.authservice.constants.Roles;
 import com.banking.authservice.dto.RegisterEmployeeRequest;
 import com.banking.authservice.dto.RegisterRequest;
@@ -22,7 +23,6 @@ import org.keycloak.representations.idm.RoleRepresentation;
 import org.keycloak.representations.idm.UserRepresentation;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -30,7 +30,6 @@ import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestClient;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.HashMap;
@@ -134,11 +133,11 @@ public class KeycloakUserService {
                     .body(KeycloakTokenResponse.class);
 
             if (tokenResponse == null || tokenResponse.getAccessToken() == null) {
-                throw new AuthenticationFailedException("Invalid username or password");
+                throw new AuthenticationFailedException(ErrorCode.INVALID_USERNAME_OR_PASSWORD,"Invalid username or password");
             }
         } catch (HttpClientErrorException.BadRequest
                  | HttpClientErrorException.Unauthorized ex) {
-            throw new AuthenticationFailedException("Invalid username or password");
+            throw new AuthenticationFailedException(ErrorCode.INVALID_USERNAME_OR_PASSWORD,"Invalid username or password");
         }
     }
 
@@ -250,9 +249,8 @@ public class KeycloakUserService {
 
     public KeycloakTokenResponse refreshToken(String refreshToken) {
         if (refreshToken == null || refreshToken.isBlank()) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Refresh token is required");
+            throw new AuthenticationFailedException(
+                    ErrorCode.REFRESH_TOKEN_INVALID, "Refresh token is required");
         }
 
         String url = serverUrl + "/realms/" + realm
@@ -278,8 +276,8 @@ public class KeycloakUserService {
 
         } catch (HttpClientErrorException.BadRequest
                  | HttpClientErrorException.Unauthorized ex) {
-            throw new ResponseStatusException(
-                    HttpStatus.UNAUTHORIZED,
+            throw new AuthenticationFailedException(
+                    ErrorCode.REFRESH_TOKEN_INVALID,
                     "Refresh token is invalid or expired");
         }
     }

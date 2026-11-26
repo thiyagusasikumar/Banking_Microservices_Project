@@ -1,6 +1,7 @@
 package com.banking.authservice.exception;
 
 
+import com.banking.authservice.constants.ErrorCode;
 import com.banking.authservice.dto.ErrorResponse;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
@@ -24,6 +25,7 @@ public class GlobalExceptionHandler {
 
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
+                ex.getErrorCode().name(),
                 ex.getMessage(),
                 Instant.now()
         );
@@ -38,15 +40,19 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                 .body(new ErrorResponse(
                         HttpStatus.UNAUTHORIZED.value(),
-                        "Invalid username or password",
+                        ex.getErrorCode().name(),
+                        ex.getMessage(),
                         Instant.now()
                 ));
     }
     @ExceptionHandler(AccountNotActiveException.class)
-    public ResponseEntity<ErrorResponse> handleAccountNotActive(AccountNotActiveException ex) {
+    public ResponseEntity<ErrorResponse> handleAccountNotActive(
+            AccountNotActiveException ex) {
+
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
                 .body(new ErrorResponse(
                         HttpStatus.FORBIDDEN.value(),
+                        ErrorCode.USER_IS_INACTIVE.name(),
                         ex.getMessage(),
                         Instant.now()
                 ));
@@ -56,6 +62,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
                 .body(new ErrorResponse(
                         HttpStatus.NOT_FOUND.value(),
+                        ErrorCode.INVALID_USERNAME_OR_PASSWORD.name(),
                         "User not found",
                         Instant.now()
                 ));
@@ -70,6 +77,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(
                         HttpStatus.BAD_REQUEST.value(),
+                        ErrorCode.METHOD_ARGUMENT_INVALID.name(),
                         message,
                         Instant.now()
                 ));
@@ -80,6 +88,7 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(
                         HttpStatus.BAD_REQUEST.value(),
+                        ErrorCode.MALFORMED_REQUEST.name(),
                         "Request body is missing or malformed",
                         Instant.now()
                 ));
@@ -88,6 +97,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex) {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_REQUEST.value(),
+                ErrorCode.ILLEGAL_ARGUMENT_TYPE.name(),
                 ex.getMessage(),
                 Instant.now()
         );
@@ -98,18 +108,19 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(RestClientException.class)
     public ResponseEntity<ErrorResponse> handleRestClient(RestClientException ex) {
         return ResponseEntity.status(HttpStatus.BAD_GATEWAY)
-                .body(new ErrorResponse(502, "Keycloak communication failed", Instant.now()));
+                .body(new ErrorResponse(502, ErrorCode.KEYCLOAK_COMMUNICATION_FAILED.name(),"Keycloak communication failed", Instant.now()));
     }
 
     @ExceptionHandler(DataIntegrityViolationException.class)
     public ResponseEntity<ErrorResponse> handleDataIntegrity(DataIntegrityViolationException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse(409, "Data conflict", Instant.now()));
+                .body(new ErrorResponse(409,ErrorCode.DATA_CONFLICT.name(), "Data conflict", Instant.now()));
     }
     @ExceptionHandler(KeyCloakCreationException.class)
     public ResponseEntity<ErrorResponse> handleKeyCloakCreationException(KeyCloakCreationException ex) {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.BAD_GATEWAY.value(),
+                ErrorCode.KEYCLOAK_COMMUNICATION_FAILED.name(),
                 "Identity provider could not complete the request",
                 Instant.now()
         );
@@ -122,6 +133,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleDuplicateUserException(DuplicateUserException ex) {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
+                ErrorCode.DUPLICATE_USERNAME.name(),
                 ex.getMessage(),
                 Instant.now()
         );

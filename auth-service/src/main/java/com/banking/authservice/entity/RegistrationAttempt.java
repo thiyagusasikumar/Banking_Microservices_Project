@@ -25,6 +25,9 @@ public class RegistrationAttempt {
     @Column(name = "user_name", nullable = false, length = 100)
     private String userName;
 
+    @Column(name = "email", length = 254)
+    private String email;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "registration_type", length = 16)
     private RegistrationType registrationType;

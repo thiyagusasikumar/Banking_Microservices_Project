@@ -2,6 +2,7 @@ package com.banking.authservice.controller;
 
 import com.banking.authservice.Service.AuthService;
 import com.banking.authservice.Service.KeycloakUserService;
+import com.banking.authservice.constants.ErrorCode;
 import com.banking.authservice.dto.*;
 import com.banking.authservice.exception.AuthenticationFailedException;
 import com.banking.authservice.util.CookieUtil;
@@ -10,7 +11,6 @@ import jakarta.validation.Valid;
 import org.springframework.http.CacheControl;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.*;
@@ -49,7 +49,7 @@ public class AuthController {
     public ResponseEntity<LoginResponse> refresh(
             @CookieValue(name ="refresh_token",required = false)String refreshToken, HttpServletResponse servletResponse) {
         if(refreshToken==null || refreshToken.isEmpty()){
-            throw new AuthenticationFailedException("Invalid refresh token");
+            throw new AuthenticationFailedException(ErrorCode.REFRESH_TOKEN_INVALID,"Invalid refresh token");
         }
         LoginResult loginResult=authService.refreshToken(refreshToken);
         cookieUtil.addRefreshTokenToCookie(
@@ -61,7 +61,7 @@ public class AuthController {
     public ResponseEntity<Void> logout(
             @CookieValue(name = "refresh_token",required = false)String refreshToken, HttpServletResponse servletResponse) {
         if(refreshToken==null || refreshToken.isEmpty()){
-            throw new AuthenticationFailedException("Invalid refresh token");
+            throw new AuthenticationFailedException(ErrorCode.REFRESH_TOKEN_INVALID,"Invalid refresh token");
         }
         try{
             authService.logout(refreshToken);

@@ -21,12 +21,14 @@ public class RegistrationAttemptService {
 
     public RegistrationAttempt startRegistrationAttempt(
             String userName,
+            String email,
             RegistrationType registrationType,
             Roles registrationRole
     ) {
         RegistrationAttempt registrationAttempt = new RegistrationAttempt();
         registrationAttempt.setAttemptId(UUID.randomUUID().toString());
         registrationAttempt.setUserName(userName);
+        registrationAttempt.setEmail(email);
         registrationAttempt.setRegistrationType(registrationType);
         registrationAttempt.setRegistrationRole(registrationRole);
         registrationAttempt.setRegistrationStatus(RegistrationAttemptStatus.STARTED);
@@ -47,6 +49,15 @@ public class RegistrationAttemptService {
                                 RegistrationAttemptStatus.LOCAL_USER_CREATED
                         )
                 );
+    }
+
+    public void updateEmail(String attemptId, String email) {
+        RegistrationAttempt attempt = registrationAttemptRepository.findByAttemptId(attemptId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Registration attempt not found: " + attemptId
+                ));
+        attempt.setEmail(email);
+        registrationAttemptRepository.save(attempt);
     }
 
     public void updateStatus(String attemptId, RegistrationAttemptStatus registrationAttemptStatus) {

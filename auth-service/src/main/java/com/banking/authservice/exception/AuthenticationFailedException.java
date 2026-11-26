@@ -1,7 +1,17 @@
 package com.banking.authservice.exception;
 
+import com.banking.authservice.constants.ErrorCode;
+import lombok.Getter;
+
+
+@Getter
 public class AuthenticationFailedException extends RuntimeException {
-    public AuthenticationFailedException(String message) {
+    private final ErrorCode errorCode;
+
+    public AuthenticationFailedException(ErrorCode errorCode, String message) {
         super(message);
+        this.errorCode = errorCode;
     }
 }
+
+
